@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from './supabase';
 
 // Unified Film Catalog Database
 // Easily extensible: To add a new movie, just append its details to this array!
@@ -313,9 +314,12 @@ export default function App() {
   const [activeNav, setActiveNav] = useState('HOME');
   const [isPreloaderActive, setIsPreloaderActive] = useState(true);
   const [isPreloaderExiting, setIsPreloaderExiting] = useState(false);
+  const [preloaderStatus, setPreloaderStatus] = useState('VAULT // SYSTEM BOOTING');
+  const [preloaderPercent, setPreloaderPercent] = useState(0);
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [isProductActive, setIsProductActive] = useState(false);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // ── Checkout multi-step flow state ──
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -330,6 +334,46 @@ export default function App() {
     cardName: '', cardNumber: '', expiry: '', cvv: ''
   });
   const [orderedItems, setOrderedItems] = useState([]); // snapshot at order placement
+  const [moviesList, setMoviesList] = useState(moviesCatalog);
+  const [filmmakers, setFilmmakers] = useState(filmmakersList);
+
+  useEffect(() => {
+    async function loadDatabase() {
+      try {
+        const { data: mv, error: mvErr } = await supabase.from('movies').select('*');
+        const { data: fm, error: fmErr } = await supabase.from('filmmakers').select('*');
+        if (mvErr) console.error("Error loading movies:", mvErr);
+        if (fmErr) console.error("Error loading filmmakers:", fmErr);
+        if (mv && mv.length > 0) {
+          const sortedMv = [...mv].sort((a, b) => {
+            const idA = parseInt(a.id, 10) || 0;
+            const idB = parseInt(b.id, 10) || 0;
+            return idA - idB;
+          });
+          setMoviesList(sortedMv);
+        }
+        if (fm && fm.length > 0) {
+          setFilmmakers(fm);
+        }
+      } catch (e) {
+        console.warn("Vault offline. Loading static elements...", e);
+      }
+    }
+    loadDatabase();
+  }, []);
+
+  // ── Mobile bespoke interface state ──
+  const [isMobile, setIsMobile] = useState(false);
+  const [directorFilter, setDirectorFilter] = useState(null);
+  const [isMobileNavExpanded, setIsMobileNavExpanded] = useState(false);
+  const [isVaultAlertMode, setIsVaultAlertMode] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 1024);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Synchronise cartCount with cartItems quantity sum
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -396,10 +440,27 @@ export default function App() {
   };
 
   // Split movie database into Home and Collections sets
-  const homeMovies = moviesCatalog.slice(0, 4);
-  const collectionMovies = moviesCatalog.slice(4, 12);
+  const homeMovies = moviesList.slice(0, 4);
+  const collectionMovies = moviesList.slice(4, 12);
 
   useEffect(() => {
+    // Dynamic status text ticker for high-fidelity brutalist preloader
+    const timer1 = setTimeout(() => setPreloaderStatus('SCANNING NITRATE STORAGE BASE...'), 350);
+    const timer2 = setTimeout(() => setPreloaderStatus('DECRYPTING CELLULOID ARCHIVES...'), 750);
+    const timer3 = setTimeout(() => setPreloaderStatus('VAULT ONLINE // REELS SECURED'), 1150);
+    const timer4 = setTimeout(() => setPreloaderStatus('ENGAGING CURTAIN REVEAL...'), 1350);
+
+    // Dynamic percentage counter loading meter
+    const pctInterval = setInterval(() => {
+      setPreloaderPercent(prev => {
+        if (prev >= 100) {
+          clearInterval(pctInterval);
+          return 100;
+        }
+        return prev + 5;
+      });
+    }, 60);
+
     // Curtains split at 1400ms
     const exitTimer = setTimeout(() => {
       setIsPreloaderExiting(true);
@@ -413,6 +474,11 @@ export default function App() {
     return () => {
       clearTimeout(exitTimer);
       clearTimeout(removeTimer);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      clearTimeout(timer4);
+      clearInterval(pctInterval);
     };
   }, []);
 
@@ -421,6 +487,7 @@ export default function App() {
     setIsProductActive(false);
     setSelectedMovie(null);
     setIsCartOpen(false);
+    setIsMobileMenuOpen(false);
     setActiveNav(item);
   };
 
@@ -477,475 +544,877 @@ export default function App() {
   const total = subtotal + shipping;
 
   return (
-    <div className={`app-layout ${isPreloaderExiting ? 'preloader-done' : ''}`}>
-      {/* CURTAIN SPLIT PRELOADER */}
+    <div className={`app-layout ${isPreloaderExiting ? 'preloader-done' : ''} ${isMobile ? 'app-mobile-mode' : ''} ${isVaultAlertMode ? 'vault-alert-on' : ''}`}>
       {isPreloaderActive && (
-        <div className={`split-preloader ${isPreloaderExiting ? 'exiting' : ''}`} aria-hidden="true">
-          <div className="preloader-curtain top-curtain" />
-          <div className="preloader-curtain bottom-curtain" />
+        <div className={`split-preloader ${isPreloaderExiting ? 'exiting' : ''}`}>
+          {/* Stark Brutalist curtains */}
+          <div className="preloader-curtain top-curtain">
+            {/* Corner tags on curtains */}
+            <div className="curtain-corner top-left-tag">SYS // R35-SECURE-VAULT</div>
+            <div className="curtain-corner top-right-tag">LOC // VAULT-01.LN</div>
+          </div>
+          <div className="preloader-curtain bottom-curtain">
+            <div className="curtain-corner bottom-left-tag">LAT // 51.5074° N</div>
+            <div className="curtain-corner bottom-right-tag">CELLULOID SAFETY CLASS</div>
+          </div>
+
           <div className="preloader-center-content">
-            <span className="preloader-logo">R-35</span>
-            <span className="preloader-tagline">FILM ARCHIVE DIVISION</span>
-            <div className="preloader-line" />
+            {/* Massive Typographic Branding */}
+            <h1 className="preloader-giant-logo font-heading-bebas">R-35</h1>
+            
+            <div className="preloader-divider-laser" />
+            
+            <div className="preloader-tech-details">
+              <span className="preloader-tagline">FILM ARCHIVE & CELLULOID VAULT</span>
+              
+              {/* Dynamic Loading Meter */}
+              <div className="preloader-brutalist-meter">
+                <div className="preloader-progress-track">
+                  <div className="preloader-progress-fill" style={{ width: `${preloaderPercent}%` }} />
+                </div>
+                <div className="preloader-loading-metrics">
+                  <span className="preloader-percent-number">{String(preloaderPercent).padStart(3, '0')}%</span>
+                  <span className="preloader-frame-counter">FRAME #0{String(Math.floor(preloaderPercent * 0.24)).padStart(3, '0')}</span>
+                </div>
+              </div>
+
+              {/* Dynamic status message */}
+              <div className="preloader-status-terminal">
+                <span className="terminal-prompt">&gt;&gt;</span> {preloaderStatus}
+              </div>
+            </div>
           </div>
         </div>
       )}
-
-      {/* LEFT SIDEBAR */}
-      <aside className="sidebar">
-        <div className="sidebar-top">
-          <div className="brand-logo">R-35</div>
-          <div className="brand-subtext">
-            <span>FILM ARCHIVE</span>
-            <span>COLLECTIBLE 35MM</span>
-            <span>EST. 2026</span>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          <div className="accent-bar" />
-          <ul className="nav-list">
-            {navItems.map((item) => (
-              <li key={item}>
-                <a
-                  href={`#${item.toLowerCase()}`}
-                  className={`nav-item ${activeNav === item && !selectedMovie ? 'active' : ''}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleNavClick(item);
-                  }}
-                >
-                  {item}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <div className="sidebar-bottom">
-          <div className="archive-status">
-            <span>ARCHIVE STATUS</span>
-            <span className="status-online">
-              <span className="dot" /> ONLINE
-            </span>
-          </div>
-          <div className="sidebar-footer">
-            © 2026 R-35 FILM ARCHIVE<br />ALL RIGHTS RESERVED
-          </div>
-        </div>
-      </aside>
-
-      {/* MAIN CONTENT AREA */}
-      <main className="main-content">
-        {/* TOP HEADER NAVIGATION */}
-        <header className="header-nav">
-          <button className="search-btn">SEARCH &mdash;</button>
-          <div 
-            className="cart-trigger-container"
-            onClick={() => setIsCartOpen(!isCartOpen)}
-            style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', cursor: 'pointer' }}
-          >
-            <div className="cart-trigger">
-              CART [ <span className="cart-number" style={{ color: isCartOpen ? 'var(--accent-red)' : 'var(--text-white)' }}>{String(cartCount).padStart(2, '0')}</span> ]
+      {isMobile ? (
+        /* ==========================================================
+           100% BESPOKE MOBILE USER INTERFACE
+           ========================================================== */
+        <div className="mobile-app-wrapper">
+          {/* MOBILE TOP STATUS BAR */}
+          <header className="mobile-top-header">
+            <div className="mobile-logo-box" onClick={() => handleNavClick('HOME')}>R-35</div>
+            <div className="mobile-header-status">
+              <span className="live-pulse" /> VAULT ONLINE
             </div>
-            {isCartOpen && <span className="cart-close-x" style={{ fontSize: '0.9rem', color: '#888', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = '#fff'} onMouseLeave={(e) => e.target.style.color = '#888'}>&#10005;</span>}
-          </div>
-        </header>
+            <button className="mobile-cart-trigger" onClick={() => setIsCartOpen(!isCartOpen)}>
+              CART [ <span className="cart-num-highlight">{String(cartCount).padStart(2, '0')}</span> ]
+            </button>
+          </header>
 
-        {/* ================================================================
-            DYNAMIC VIEW ROUTING LAYER
-            ================================================================ */}
-        {(() => {
-          if (activeNav === 'ABOUT') {
-            return (
-              <>
-                {/* ABOUT SHOWCASE SECTION */}
-                <section className="hero-section">
-                  <div className="hero-left">
-                    <span className="about-badge">ABOUT</span>
-                    <h2 className="hero-tagline font-heading-bebas">
-                      PRESERVING CINEMA.<br />HONORING HISTORY.
-                    </h2>
-                    <div className="accent-bar-large" />
-                    <div className="hero-description about-description">
-                      <p>
-                        R-35 is an archive and marketplace dedicated<br />
-                        to collectible 35mm motion picture film.
-                      </p>
-                      <p>
-                        We preserve original film elements and provide<br />
-                        access to rare, authentic cinema for collectors,<br />
-                        institutions, and filmmakers.
-                      </p>
-                      <p>
-                        Every reel has a story.<br />
-                        We protect that story for the future.
-                      </p>
+          {/* MOBILE MAIN WORKSPACE */}
+          <main key={activeNav} className="mobile-main-content m-pane-entry-wrapper">
+            {(() => {
+              if (activeNav === 'ABOUT') {
+                return (
+                  <div className="m-about-pane">
+                    <div className="m-section-header">
+                      <span className="m-badge">INFO</span>
+                      <h1 className="m-pane-title">PRESERVING CINEMA</h1>
+                      <div className="m-accent-line" />
                     </div>
-                    <button 
-                      className="about-archive-btn" 
-                      onClick={() => handleNavClick('HOME')}
-                    >
-                      OUR ARCHIVE <span className="arrow-wide">&rarr;</span>
-                    </button>
-                  </div>
+                    <div className="m-text-card">
+                      <p>R-35 is an archive and marketplace dedicated to physical 35mm motion picture celluloid.</p>
+                      <p>We source authentic print safety bases from legendary vaults worldwide and preserve them for directors, institutions, and dedicated collectors.</p>
+                    </div>
+                    
+                    <div className="m-halftone-showcase">
+                      <div className="m-portrait-container">
+                        <img src="/assets/halftone/ridley.png" alt="Ridley Scott" className="m-portrait-img" />
+                        <div className="m-portrait-tag">
+                          <strong>RIDLEY SCOTT</strong>
+                          <span>R-35 ADVISOR</span>
+                        </div>
+                      </div>
+                    </div>
 
-                  <div className="hero-right">
-                    <div className="portrait-container">
-                      <img 
-                        src="/assets/halftone/ridley.png" 
-                        alt="Ridley Scott Halftone Portrait" 
-                        className="halftone-portrait"
-                      />
-                      <div className="portrait-metadata">
-                        <span className="meta-name">RIDLEY SCOTT</span>
-                        <span className="meta-role">DIRECTOR / PRODUCER</span>
-                        <span className="meta-title">R-35 ADVISOR</span>
-                        <div className="meta-line" />
+                    <div className="m-stats-list">
+                      <div className="m-stat-box">
+                        <span className="m-stat-num">12K+</span>
+                        <span className="m-stat-label">REELS SAVED</span>
+                      </div>
+                      <div className="m-stat-box">
+                        <span className="m-stat-num">85+</span>
+                        <span className="m-stat-label">COUNTRIES</span>
+                      </div>
+                      <div className="m-stat-box">
+                        <span className="m-stat-num">100%</span>
+                        <span className="m-stat-label">AUTHENTIC</span>
                       </div>
                     </div>
                   </div>
-                </section>
+                );
+              } else if (activeNav === 'COLLECTION') {
+                const displayedCollection = directorFilter 
+                  ? collectionMovies.filter(m => m.director.toUpperCase().includes(directorFilter.toUpperCase()))
+                  : collectionMovies;
 
-                {/* BOTTOM NUMBERS & NEWSLETTER GRID */}
-                <section className="featured-section">
-                  <div className="featured-sidebar">
-                    <span className="vertical-label">R-35 BY THE NUMBERS</span>
-                  </div>
-
-                  <div className="featured-content">
-                    <div className="stats-grid">
-                      {/* STAT 01 */}
-                      <div className="stat-column">
-                        <div className="stat-num">12,000+</div>
-                        <div className="stat-label">REELS ARCHIVED</div>
-                        <p className="stat-desc">Original 35mm motion picture reels and elements.</p>
+                return (
+                  <div className="m-archive-pane">
+                    <div className="m-section-header">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <div>
+                          <span className="m-badge">ARCHIVE</span>
+                          <h1 className="m-pane-title">THE REELS</h1>
+                        </div>
+                        {directorFilter && (
+                          <button className="clear-filter-btn" onClick={() => setDirectorFilter(null)}>
+                            CLEAR FILTER ✕
+                          </button>
+                        )}
                       </div>
-
-                      {/* STAT 02 */}
-                      <div className="stat-column">
-                        <div className="stat-num">85+</div>
-                        <div className="stat-label">COUNTRIES REPRESENTED</div>
-                        <p className="stat-desc">Film from around the world. Preserved in our archive.</p>
-                      </div>
-
-                      {/* STAT 03 */}
-                      <div className="stat-column">
-                        <div className="stat-num">100%</div>
-                        <div className="stat-label">AUTHENTIC</div>
-                        <p className="stat-desc">Every reel is verified, inspected, and cataloged.</p>
-                      </div>
-
-                      {/* STAT 04 */}
-                      <div className="stat-column">
-                        <div className="stat-num">EST. 2026</div>
-                        <div className="stat-label">FOUNDED</div>
-                        <p className="stat-desc">Built by filmmakers and archivists. For cinema.</p>
-                      </div>
-
-                      {/* NEWSLETTER COLUMN */}
-                      <div className="newsletter-column">
-                        <div className="newsletter-label">STAY UPDATED</div>
-                        <p className="newsletter-desc">New acquisitions, archive stories, and film history.</p>
-                        <form className="newsletter-input-form" onSubmit={(e) => { e.preventDefault(); e.target.reset(); }}>
-                          <input type="email" placeholder="Enter your email" className="newsletter-input" required />
-                          <button type="submit" className="newsletter-submit-arrow">&rarr;</button>
-                        </form>
-                      </div>
+                      <div className="m-accent-line" />
                     </div>
-                  </div>
-                </section>
-              </>
-            );
-          } else if (activeNav === 'COLLECTION') {
-            return (
-              <div className="collections-container">
-                <div className="collections-header-block">
-                  <h1 className="collections-main-title font-heading-bebas">COLLECTIONS</h1>
-                  <div className="accent-bar-small" />
-                  <p className="collections-subtitle">
-                    Timeless films. Original elements.<br />Preserved on 35mm.
-                  </p>
-                </div>
 
-                <div className="collections-filter-bar">
-                  <div className="filter-group">
-                    <button className="filter-dropdown-btn">
-                      FILTER <span className="chevron-down">&#9662;</span>
-                    </button>
-                    <button className="filter-dropdown-btn">
-                      SORT BY <span className="chevron-down">&#9662;</span>
-                    </button>
-                  </div>
-                  <div className="view-toggle">
-                    <span className="view-label">VIEW</span>
-                    <button className="toggle-btn active" title="Grid View">
-                      <svg className="toggle-icon" viewBox="0 0 24 24" width="16" height="16">
-                        <rect x="3" y="3" width="7" height="7" fill="currentColor"/>
-                        <rect x="14" y="3" width="7" height="7" fill="currentColor"/>
-                        <rect x="3" y="14" width="7" height="7" fill="currentColor"/>
-                        <rect x="14" y="14" width="7" height="7" fill="currentColor"/>
-                      </svg>
-                    </button>
-                    <button className="toggle-btn" title="List View">
-                      <svg className="toggle-icon" viewBox="0 0 24 24" width="16" height="16">
-                        <rect x="3" y="5" width="18" height="2" fill="currentColor"/>
-                        <rect x="3" y="11" width="18" height="2" fill="currentColor"/>
-                        <rect x="3" y="17" width="18" height="2" fill="currentColor"/>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
+                    {directorFilter && (
+                      <div className="m-active-filter-banner">
+                        FILTERED BY: <strong>{directorFilter}</strong>
+                      </div>
+                    )}
 
-                <div className="collections-cards-grid">
-                  {collectionMovies.map((movie, index) => {
-                    const displayId = (index + 1).toString().padStart(3, '0');
-                    return (
-                      <div 
-                        key={movie.id} 
-                        className="collections-vintage-card" 
-                        onClick={() => openProductPage(movie)}
-                      >
-                        {/* Top half text details */}
-                        <div className="collections-card-top">
-                          <div className="card-brand-header">
-                            <span className="card-brand-tag">R-35</span>
-                            <span className="card-index-tag">{displayId}</span>
-                          </div>
-                          
-                          <h2 className="collections-card-title">{movie.title}</h2>
-                          
-                          <div className="card-divider-line" />
-                          
-                          <div className="card-directors-row">
-                            <div className="card-director-group">
-                              <span className="card-dir-label">DIRECTED BY</span>
-                              <span className="card-dir-val">{movie.director}</span>
-                              <span className="card-gauge-label">35MM</span>
+                    <div className="m-archive-stack">
+                      {displayedCollection.map((movie, idx) => {
+                        const displayId = (idx + 1).toString().padStart(3, '0');
+                        return (
+                          <div key={movie.id} className="m-reel-tin-card" onClick={() => openProductPage(movie)}>
+                            <div className="m-reel-card-header">
+                              <span className="m-reel-id">REEL #{displayId}</span>
+                              <span className="m-reel-price">{movie.price}</span>
                             </div>
-                            <span className="card-year-val">{movie.year}</span>
+                            
+                            <h2 className="m-reel-title">{movie.title}</h2>
+                            
+                            <div className="m-reel-meta-grid">
+                              <div><span>DIR:</span> <strong>{movie.director}</strong></div>
+                              <div><span>YEAR:</span> <strong>{movie.year}</strong></div>
+                              <div><span>BASE:</span> <strong>{movie.vaultStatus}</strong></div>
+                            </div>
+
+                            <div className="m-reel-cinematic-banner">
+                              <img src={movie.poster} alt={movie.title} className="m-reel-banner-img" style={{ objectPosition: movie.cropPosition || 'center' }} />
+                              <div className="m-reel-screen-overlay" />
+                              <div className="m-halftone-grid-overlay" />
+                            </div>
+
+                            <div className="m-reel-actions">
+                              <span>INSPECT VAULT METADATA &rarr;</span>
+                            </div>
                           </div>
-                        </div>
-
-                        {/* Bottom half halftone scene */}
-                        <div className="collections-card-bottom">
-                          <div className="scene-image-wrapper">
-                            <img 
-                              src={movie.poster} 
-                              alt={`${movie.title} Halftone Scene`} 
-                              className="scene-image-crop"
-                              style={{ objectPosition: movie.cropPosition || 'center center' }}
-                            />
-                            <div className="halftone-grid-overlay" />
-                          </div>
-                          <div className="card-footer-label">CLASSIC CINEMA ARCHIVE</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="collections-pagination">
-                  <button className="pag-btn">&larr;</button>
-                  <button className="pag-number active">01</button>
-                  <button className="pag-number">02</button>
-                  <button className="pag-number">03</button>
-                  <button className="pag-btn">&rarr;</button>
-                </div>
-              </div>
-            );
-          } else if (activeNav === 'FILMMAKERS') {
-            return (
-              <div className="filmmakers-container">
-                <div className="filmmakers-header-block">
-                  <div className="filmmakers-header-top">
-                    <h1 className="filmmakers-main-title font-heading-bebas">FILMMAKERS</h1>
-                    <span className="filmmakers-count-badge">08 FILMMAKERS</span>
-                  </div>
-                  <div className="accent-bar-small" />
-                  <div className="filmmakers-header-bottom">
-                    <div className="filmmakers-subtitle">
-                      <p>The visionaries behind timeless stories.</p>
-                      <p>Explore collections by filmmaker.</p>
-                    </div>
-                    <div className="filmmakers-sort-control">
-                      <span className="sort-label">SORT BY</span>
-                      <button className="sort-dropdown-trigger">
-                        A &ndash; Z <span className="chevron-down">&#9662;</span>
-                      </button>
+                        );
+                      })}
                     </div>
                   </div>
-                </div>
-
-                <div className="filmmakers-table">
-                  <div className="table-header">
-                    <span className="th-filmmaker">FILMMAKER</span>
-                    <span className="th-works">NOTABLE WORKS</span>
-                    <span className="th-reels">REELS IN ARCHIVE</span>
-                  </div>
-
-                  <div className="table-body">
-                    {filmmakersList.map((director, i) => (
-                      <div key={director.name} className="filmmaker-row">
-                        <div className="col-filmmaker">
-                          <span className="director-index">{(i + 1).toString().padStart(2, '0')}</span>
-                          <span className="director-name">{director.name}</span>
-                        </div>
-                        <div className="col-works">
-                          {director.works.map((work, wIdx) => (
-                            <React.Fragment key={work}>
-                              {wIdx > 0 && <span className="work-dot">&bull;</span>}
-                              <span className="work-title">{work}</span>
-                            </React.Fragment>
-                          ))}
-                        </div>
-                        <div className="col-reels">
-                          <span className="reels-count">{director.reels}</span>
-                        </div>
-                        <div className="col-arrow">
-                          <span className="arrow-indicator">&rarr;</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          } else if (activeNav === 'CONTACT') {
-            return (
-              <div className="contact-container">
-                <div className="contact-left">
-                  <span className="contact-badge">INQUIRIES</span>
-                  <h1 className="contact-title font-heading-bebas">GET IN TOUCH WITH R-35</h1>
-                  <div className="accent-bar-large" />
-                  <div className="contact-info-block">
-                    <div className="info-item">
-                      <span className="info-label">HEADQUARTERS</span>
-                      <span className="info-val">35mm Vault St, London, EC1A 4HD</span>
-                    </div>
-                    <div className="info-item">
-                      <span className="info-label">EMAIL</span>
-                      <span className="info-val">archive@r-35.com</span>
-                    </div>
-                    <div className="info-item">
-                      <span className="info-label">PHONE</span>
-                      <span className="info-val">+44 (0) 20 7946 0192</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="contact-right">
-                  <form className="contact-form" onSubmit={(e) => { e.preventDefault(); e.target.reset(); alert('Inquiry sent successfully.'); }}>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label className="form-label">NAME</label>
-                        <input type="text" className="form-input" placeholder="Your name" required />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">EMAIL</label>
-                        <input type="email" className="form-input" placeholder="Your email" required />
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">SUBJECT</label>
-                      <input type="text" className="form-input" placeholder="Acquisitions, Sales, etc." required />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">MESSAGE</label>
-                      <textarea className="form-textarea" placeholder="Describe your inquiry in detail..." required></textarea>
-                    </div>
-                    <button type="submit" className="contact-submit-btn">
-                      SUBMIT FORM <span className="arrow-wide">&rarr;</span>
-                    </button>
-                  </form>
-                </div>
-              </div>
-            );
-          } else {
-            // Default activeNav === 'HOME' Page view
-            return (
-              <>
-                {/* HERO CORE SHOWCASE SECTION (Custom cinematic 'Home' name meaning) */}
-                <section className="hero-section">
-                  <div className="hero-left">
-                    <h1 className="hero-logo-large">R-35</h1>
-                    <div className="accent-bar-large" />
-                    <h2 className="hero-tagline">COLLECTIBLE<br />35MM FILM REELS.</h2>
-                    <p className="hero-description">
-                      Rare film. Verified history.<br />Preserved for the future.
-                    </p>
-                    <a href="#collection" className="browse-link" onClick={(e) => { e.preventDefault(); handleNavClick('COLLECTION'); }}>
-                      BROWSE ARCHIVE <span className="arrow">&rarr;</span>
-                    </a>
-                  </div>
-
-                  <div className="hero-right">
-                    <div className="portrait-container">
-                      <img 
-                        src="/assets/halftone/katsuhiro.png" 
-                        alt="Katsuhiro Otomo Halftone Portrait" 
-                        className="halftone-portrait"
-                      />
-                      <div className="portrait-metadata">
-                        <span className="meta-name">KATSUHIRO OTOMO</span>
-                        <span className="meta-role">DIRECTOR</span>
-                        <span className="meta-title">AKIRA</span>
-                        <span className="meta-year">1988</span>
-                        <div className="meta-line" />
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* BOTTOM FEATURED ARCHIVE BAR */}
-                <section className="featured-section">
-                  <div className="featured-sidebar">
-                    <span className="vertical-label">FEATURED ARCHIVE</span>
-                  </div>
-
-                  <div className="featured-content">
-                    <div className="featured-header">
-                      <a href="#collection" className="view-all-link" onClick={(e) => { e.preventDefault(); handleNavClick('COLLECTION'); }}>
-                        VIEW ALL ARCHIVE <span className="arrow">&rarr;</span>
-                      </a>
+                );
+              } else if (activeNav === 'FILMMAKERS') {
+                return (
+                  <div className="m-directors-pane">
+                    <div className="m-section-header">
+                      <span className="m-badge">DIRECTORS</span>
+                      <h1 className="m-pane-title">ARCHIVAL CATALOG</h1>
+                      <div className="m-accent-line" />
                     </div>
 
-                    <div className="cards-grid">
-                      {homeMovies.map((movie) => (
+                    <div className="m-directors-deck">
+                      {filmmakers.map((director, i) => (
                         <div 
-                          key={movie.id} 
-                          className="movie-card" 
-                          onClick={() => openProductPage(movie)}
+                          key={director.name} 
+                          className="m-director-ledger-card"
+                          onClick={() => {
+                            setDirectorFilter(director.name);
+                            setActiveNav('COLLECTION');
+                          }}
                         >
-                          <div className="card-number">{movie.id}</div>
-                          <div className="card-body">
-                            <div className="poster-wrapper">
-                              <img src={movie.poster} alt={`${movie.title} Movie Poster`} className="poster-img" />
+                          <div className="m-dir-card-left">
+                            <span className="m-dir-num">{(i + 1).toString().padStart(2, '0')}</span>
+                            <div>
+                              <h3 className="m-dir-name">{director.name}</h3>
+                              <span className="m-dir-works-summary">{director.works.join(' \u2022 ')}</span>
                             </div>
-                            <div className="card-details">
-                              <div className="movie-info">
-                                <h4 className="movie-title">{movie.title}</h4>
-                                <div className="movie-specs">
-                                  <span>DIR. {movie.director}</span>
-                                  <span>{movie.year}</span>
-                                  <span>{movie.spec1}</span>
-                                  <span>{movie.spec2}</span>
-                                </div>
-                              </div>
-                              <div className="movie-footer">
-                                <span className="price">{movie.price}</span>
-                                <span className="action-arrow">&rarr;</span>
-                              </div>
-                            </div>
+                          </div>
+                          <div className="m-dir-card-right">
+                            <span className="m-dir-reels-count">{director.reels}</span>
+                            <span className="m-dir-reels-lbl">REELS</span>
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                </section>
-              </>
-            );
-          }
-        })()}
+                );
+              } else if (activeNav === 'CONTACT') {
+                return (
+                  <div className="m-inbox-pane">
+                    <div className="m-section-header">
+                      <span className="m-badge">INBOX</span>
+                      <h1 className="m-pane-title">ACQUISITIONS CHANNEL</h1>
+                      <div className="m-accent-line" />
+                    </div>
+
+                    <form className="m-console-form" onSubmit={(e) => { e.preventDefault(); e.target.reset(); alert('Secure channel transmission complete.'); }}>
+                      <div className="m-form-group">
+                        <label className="m-form-label">IDENTITY / NAME</label>
+                        <input className="m-form-input" placeholder="Secure code or identity name" required />
+                      </div>
+                      <div className="m-form-group">
+                        <label className="m-form-label">VAULT / CONTACT EMAIL</label>
+                        <input className="m-form-input" type="email" placeholder="Your secure email channel" required />
+                      </div>
+                      <div className="m-form-group">
+                        <label className="m-form-label">TRANSMISSION CONTENT</label>
+                        <textarea className="m-form-textarea" placeholder="Detail your vault acquisition or inquiry..." required></textarea>
+                      </div>
+                      <button type="submit" className="m-submit-btn">
+                        TRANSMIT INQUIRY &rarr;
+                      </button>
+                    </form>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="m-home-pane">
+                    {/* CUSTOM DIGITAL MARQUEE */}
+                    <div className="m-ticker-marquee">
+                      <div className="m-ticker-track">
+                        <span>R-35 PRESERVATION SECURE HUB // VAULT ONLINE // 35MM CELLULOID ACQUISITIONS ACTIVE // R-35 PRESERVATION SECURE HUB // </span>
+                      </div>
+                    </div>
+
+                    {/* VAULT ALARM TOGGLE PANEL */}
+                    <div className={`m-vault-alarm-panel ${isVaultAlertMode ? 'alert-active' : ''}`}>
+                      <div className="m-alarm-left">
+                        <span className="m-alarm-badge">{isVaultAlertMode ? 'WARNING // VAULT ALERT ACTIVE' : 'AMBIENT SYSTEM MODE'}</span>
+                        <div className="m-alarm-desc">{isVaultAlertMode ? 'EMERGENCY RED WARNING LINE SYSTEM ENGAGED' : 'ENGAGE SECURITY RED WARNING LEVEL?'}</div>
+                      </div>
+                      <button 
+                        className="m-alarm-toggle-btn"
+                        onClick={() => setIsVaultAlertMode(!isVaultAlertMode)}
+                      >
+                        {isVaultAlertMode ? 'RESET VAULT' : 'ENGAGE SECURITY'}
+                      </button>
+                    </div>
+
+                    {/* VAULT CONTROL ENVIRONMENTAL TELEMETRY */}
+                    <div className="m-vault-telemetry-panel">
+                      <div className="m-telemetry-header">
+                        <span className="m-telemetry-title">SENSORY TELEMETRY READOUT</span>
+                        <span className="m-telemetry-status">ONLINE</span>
+                      </div>
+                      <div className="m-telemetry-grid">
+                        <div className="m-telemetry-item">
+                          <span className="m-tel-lbl">VAULT TEMP</span>
+                          <strong className="m-tel-val">39.8°F</strong>
+                        </div>
+                        <div className="m-telemetry-item">
+                          <span className="m-tel-lbl">HUMIDITY</span>
+                          <strong className="m-tel-val">34.6% RH</strong>
+                        </div>
+                        <div className="m-telemetry-item">
+                          <span className="m-tel-lbl">AIR FILT</span>
+                          <strong className="m-tel-val neon-green">ISO CLASS 5</strong>
+                        </div>
+                        <div className="m-telemetry-item">
+                          <span className="m-tel-lbl">NITRATE CLASS</span>
+                          <strong className="m-tel-val">STABLE BASE</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* IMMERSIVE SPROCKET FILM STRIP CAROUSEL */}
+                    <div className="m-stream-header sprocket-header">
+                      <span>35MM SPROCKET FILMSTREAM</span>
+                      <span className="dot-blink" />
+                    </div>
+
+                    <div className="m-sprocket-film-strip-outer">
+                      <div className="m-sprocket-film-strip">
+                        {moviesList.map((movie, idx) => (
+                          <div 
+                            key={movie.id} 
+                            className="m-sprocket-frame"
+                            onClick={() => openProductPage(movie)}
+                          >
+                            {/* Top sprockets */}
+                            <div className="m-sprocket-holes-row top">
+                              {Array.from({ length: 8 }).map((_, i) => (
+                                <div key={i} className="m-sprocket-hole" />
+                              ))}
+                            </div>
+
+                            {/* Film cell scene */}
+                            <div className="m-sprocket-image-area">
+                              <img src={movie.poster} alt={movie.title} className="m-sprocket-img" style={{ objectPosition: movie.cropPosition || 'center' }} />
+                              <div className="m-sprocket-burn-filter" />
+                              <span className="m-sprocket-frame-num">{String(idx + 1).padStart(2, '0')}</span>
+                            </div>
+
+                            {/* Bottom sprockets */}
+                            <div className="m-sprocket-holes-row bottom">
+                              {Array.from({ length: 8 }).map((_, i) => (
+                                <div key={i} className="m-sprocket-hole" />
+                              ))}
+                            </div>
+
+                            {/* Film info block */}
+                            <div className="m-sprocket-metadata">
+                              <span className="m-sprocket-gauge">35MM GAUGE REEL</span>
+                              <h3 className="m-sprocket-title">{movie.title}</h3>
+                              <div className="m-sprocket-sub">
+                                <span>{movie.year}</span>
+                                <span className="m-sprocket-price">{movie.price}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* DYNAMIC LOG FEED */}
+                    <div className="m-vault-logs-feed" onClick={() => { 
+                      const r = 'SECURE-' + Math.random().toString(36).substring(7).toUpperCase();
+                      alert(`RE-VERIFYING ARCHIVE SYSTEM PROTOCOL... CHANNEL [CH-${r}] ACTIVE.`); 
+                    }}>
+                      <div className="m-log-feed-title">REAL-TIME OPERATIONAL LOGS</div>
+                      <div className="m-log-terminal">
+                        <div className="m-log-line"><code>[16:56:12] VAULT_01_LN PORTAL SECURE... LOCKED</code></div>
+                        <div className="m-log-line"><code>[16:56:20] SCANNING SPINDLE NITRATE BALANCE... VERIFIED</code></div>
+                        <div className="m-log-line"><code>[16:56:28] DECRYPTING RETRO CELLULOID ENCRYPT... ENGAGED</code></div>
+                        <div className="m-log-line text-highlight"><code>&gt;&gt; TAP TO TEST VAULT CONNECTION SECURE CHANNEL</code></div>
+                      </div>
+                    </div>
+
+                    {/* SPOTLIGHT REEL */}
+                    <div className="m-spotlight-box" onClick={() => openProductPage(moviesList[0])}>
+                      <span className="m-spotlight-tag">PRESERVATIONS SPOTLIGHT</span>
+                      <h1 className="m-spotlight-title">{moviesList[0].title}</h1>
+                      <p className="m-spotlight-desc">DIR. {moviesList[0].director} &bull; {moviesList[0].year}</p>
+                      
+                      <div className="m-spotlight-image-holder">
+                        <img src={moviesList[0].poster} alt={moviesList[0].title} className="m-spotlight-img" />
+                        <div className="m-spotlight-vignette" />
+                      </div>
+                      <div className="m-spotlight-inspect">
+                        <span>INSPECT SPOTLIGHT PRINT &rarr;</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+            })()}
+          </main>
+
+          {/* MOBILE FLOATING PILL NAVIGATION */}
+          <div className={`mobile-floating-nav-container ${isMobileNavExpanded ? 'is-expanded' : 'is-collapsed'}`}>
+            {isMobileNavExpanded ? (
+              <div className="mobile-floating-nav-expanded">
+                {[
+                  ['HOME', 'HOME [04]', '\u25C6'],
+                  ['COLLECTION', 'REELS [08]', '\u25A3'],
+                  ['FILMMAKERS', 'CATALOG [08]', '\u2630'],
+                  ['ABOUT', 'INFO [NUM]', '\u25B2'],
+                  ['CONTACT', 'INBOX [SEC]', '\u2709']
+                ].map(([navId, label, symbol]) => (
+                  <button
+                    key={navId}
+                    className={`floating-dock-item ${activeNav === navId ? 'active' : ''}`}
+                    onClick={() => {
+                      handleNavClick(navId);
+                      setIsMobileNavExpanded(false);
+                    }}
+                  >
+                    <span className="dock-symbol">{symbol}</span>
+                    <span className="dock-label">{label}</span>
+                  </button>
+                ))}
+                <button 
+                  className="floating-dock-close"
+                  onClick={() => setIsMobileNavExpanded(false)}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button 
+                className="mobile-floating-trigger-pill"
+                onClick={() => setIsMobileNavExpanded(true)}
+              >
+                <span className="trigger-pulse-dot" />
+                <span className="trigger-label">
+                  {activeNav === 'HOME' ? '\u25C6 HOME' :
+                   activeNav === 'COLLECTION' ? '\u25A3 REELS' :
+                   activeNav === 'FILMMAKERS' ? '\u2630 CATALOG' :
+                   activeNav === 'ABOUT' ? '\u25B2 INFO' :
+                   '\u2709 INBOX'}
+                </span>
+                <span className="trigger-icon-chevron">&#9652;</span>
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* ==========================================================
+           ORIGINAL DESKTOP USER INTERFACE
+           ========================================================== */
+        <>
+          <aside className="sidebar">
+            <div className="sidebar-top">
+              <div className="brand-logo">R-35</div>
+              <div className="brand-subtext">
+                <span>FILM ARCHIVE</span>
+                <span>COLLECTIBLE 35MM</span>
+                <span>EST. 2026</span>
+              </div>
+            </div>
+
+            <nav className="sidebar-nav">
+              <div className="accent-bar" />
+              <ul className="nav-list">
+                {navItems.map((item) => (
+                  <li key={item}>
+                    <a
+                      href={`#${item.toLowerCase()}`}
+                      className={`nav-item ${activeNav === item && !selectedMovie ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleNavClick(item);
+                      }}
+                    >
+                      {item}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <div className="sidebar-bottom">
+              <div className="archive-status">
+                <span>ARCHIVE STATUS</span>
+                <span className="status-online">
+                  <span className="dot" /> ONLINE
+                </span>
+              </div>
+              <div className="sidebar-footer">
+                © 2026 R-35 FILM ARCHIVE<br />ALL RIGHTS RESERVED
+              </div>
+            </div>
+          </aside>
+
+          <main className="main-content">
+            {/* TOP HEADER NAVIGATION */}
+            <header className="header-nav">
+              <div className="mobile-header-brand" onClick={() => handleNavClick('HOME')}>R-35</div>
+              <button className="search-btn">SEARCH &mdash;</button>
+              <div 
+                className="cart-trigger-container"
+                onClick={() => setIsCartOpen(!isCartOpen)}
+                style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', cursor: 'pointer' }}
+              >
+                <div className="cart-trigger">
+                  CART [ <span className="cart-number" style={{ color: isCartOpen ? 'var(--accent-red)' : 'var(--text-white)' }}>{String(cartCount).padStart(2, '0')}</span> ]
+                </div>
+                {isCartOpen && <span className="cart-close-x" style={{ fontSize: '0.9rem', color: '#888', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = '#fff'} onMouseLeave={(e) => e.target.style.color = '#888'}>&#10005;</span>}
+              </div>
+              <button 
+                className="mobile-menu-toggle"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              >
+                {isMobileMenuOpen ? 'CLOSE \u2715' : 'MENU \u2630'}
+              </button>
+            </header>
+
+            {/* DYNAMIC VIEW ROUTING LAYER */}
+            {(() => {
+              if (activeNav === 'ABOUT') {
+                return (
+                  <>
+                    {/* ABOUT SHOWCASE SECTION */}
+                    <section className="hero-section">
+                      <div className="hero-left">
+                        <span className="about-badge">ABOUT</span>
+                        <h2 className="hero-tagline font-heading-bebas">
+                          PRESERVING CINEMA.<br />HONORING HISTORY.
+                        </h2>
+                        <div className="accent-bar-large" />
+                        <div className="hero-description about-description">
+                          <p>
+                            R-35 is an archive and marketplace dedicated<br />
+                            to collectible 35mm motion picture film.
+                          </p>
+                          <p>
+                            We preserve original film elements and provide<br />
+                            access to rare, authentic cinema for collectors,<br />
+                            institutions, and filmmakers.
+                          </p>
+                          <p>
+                            Every reel has a story.<br />
+                            We protect that story for the future.
+                          </p>
+                        </div>
+                        <button 
+                          className="about-archive-btn" 
+                          onClick={() => handleNavClick('HOME')}
+                        >
+                          OUR ARCHIVE <span className="arrow-wide">&rarr;</span>
+                        </button>
+                      </div>
+
+                      <div className="hero-right">
+                        <div className="portrait-container">
+                          <img 
+                            src="/assets/halftone/ridley.png" 
+                            alt="Ridley Scott Halftone Portrait" 
+                            className="halftone-portrait"
+                          />
+                          <div className="portrait-metadata">
+                            <span className="meta-name">RIDLEY SCOTT</span>
+                            <span className="meta-role">DIRECTOR / PRODUCER</span>
+                            <span className="meta-title">R-35 ADVISOR</span>
+                            <div className="meta-line" />
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* BOTTOM NUMBERS & NEWSLETTER GRID */}
+                    <section className="featured-section">
+                      <div className="featured-sidebar">
+                        <span className="vertical-label">R-35 BY THE NUMBERS</span>
+                      </div>
+
+                      <div className="featured-content">
+                        <div className="stats-grid">
+                          {/* STAT 01 */}
+                          <div className="stat-column">
+                            <div className="stat-num">12,000+</div>
+                            <div className="stat-label">REELS ARCHIVED</div>
+                            <p className="stat-desc">Original 35mm motion picture reels and elements.</p>
+                          </div>
+
+                          {/* STAT 02 */}
+                          <div className="stat-column">
+                            <div className="stat-num">85+</div>
+                            <div className="stat-label">COUNTRIES REPRESENTED</div>
+                            <p className="stat-desc">Film from around the world. Preserved in our archive.</p>
+                          </div>
+
+                          {/* STAT 03 */}
+                          <div className="stat-column">
+                            <div className="stat-num">100%</div>
+                            <div className="stat-label">AUTHENTIC</div>
+                            <p className="stat-desc">Every reel is verified, inspected, and cataloged.</p>
+                          </div>
+
+                          {/* STAT 04 */}
+                          <div className="stat-column">
+                            <div className="stat-num">EST. 2026</div>
+                            <div className="stat-label">FOUNDED</div>
+                            <p className="stat-desc">Built by filmmakers and archivists. For cinema.</p>
+                          </div>
+
+                          {/* NEWSLETTER COLUMN */}
+                          <div className="newsletter-column">
+                            <div className="newsletter-label">STAY UPDATED</div>
+                            <p className="newsletter-desc">New acquisitions, archive stories, and film history.</p>
+                            <form className="newsletter-input-form" onSubmit={(e) => { e.preventDefault(); e.target.reset(); }}>
+                              <input type="email" placeholder="Enter your email" className="newsletter-input" required />
+                              <button type="submit" className="newsletter-submit-arrow">&rarr;</button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  </>
+                );
+              } else if (activeNav === 'COLLECTION') {
+                return (
+                  <div className="collections-container">
+                    <div className="collections-header-block">
+                      <h1 className="collections-main-title font-heading-bebas">COLLECTIONS</h1>
+                      <div className="accent-bar-small" />
+                      <p className="collections-subtitle">
+                        Timeless films. Original elements.<br />Preserved on 35mm.
+                      </p>
+                    </div>
+
+                    <div className="collections-filter-bar">
+                      <div className="filter-group">
+                        <button className="filter-dropdown-btn">
+                          FILTER <span className="chevron-down">&#9662;</span>
+                        </button>
+                        <button className="filter-dropdown-btn">
+                          SORT BY <span className="chevron-down">&#9662;</span>
+                        </button>
+                      </div>
+                      <div className="view-toggle">
+                        <span className="view-label">VIEW</span>
+                        <button className="toggle-btn active" title="Grid View">
+                          <svg className="toggle-icon" viewBox="0 0 24 24" width="16" height="16">
+                            <rect x="3" y="3" width="7" height="7" fill="currentColor"/>
+                            <rect x="14" y="3" width="7" height="7" fill="currentColor"/>
+                            <rect x="3" y="14" width="7" height="7" fill="currentColor"/>
+                            <rect x="14" y="14" width="7" height="7" fill="currentColor"/>
+                          </svg>
+                        </button>
+                        <button className="toggle-btn" title="List View">
+                          <svg className="toggle-icon" viewBox="0 0 24 24" width="16" height="16">
+                            <rect x="3" y="5" width="18" height="2" fill="currentColor"/>
+                            <rect x="3" y="11" width="18" height="2" fill="currentColor"/>
+                            <rect x="3" y="17" width="18" height="2" fill="currentColor"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="collections-cards-grid">
+                      {collectionMovies.map((movie, index) => {
+                        const displayId = (index + 1).toString().padStart(3, '0');
+                        return (
+                          <div 
+                            key={movie.id} 
+                            className="collections-vintage-card" 
+                            onClick={() => openProductPage(movie)}
+                          >
+                            {/* Top half text details */}
+                            <div className="collections-card-top">
+                              <div className="card-brand-header">
+                                <span className="card-brand-tag">R-35</span>
+                                <span className="card-index-tag">{displayId}</span>
+                              </div>
+                              
+                              <h2 className="collections-card-title">{movie.title}</h2>
+                              
+                              <div className="card-divider-line" />
+                              
+                              <div className="card-directors-row">
+                                <div className="card-director-group">
+                                  <span className="card-dir-label">DIRECTED BY</span>
+                                  <span className="card-dir-val">{movie.director}</span>
+                                  <span className="card-gauge-label">35MM</span>
+                                </div>
+                                <span className="card-year-val">{movie.year}</span>
+                              </div>
+                            </div>
+
+                            {/* Bottom half halftone scene */}
+                            <div className="collections-card-bottom">
+                              <div className="scene-image-wrapper">
+                                <img 
+                                  src={movie.poster} 
+                                  alt={`${movie.title} Halftone Scene`} 
+                                  className="scene-image-crop"
+                                  style={{ objectPosition: movie.cropPosition || 'center center' }}
+                                />
+                                <div className="halftone-grid-overlay" />
+                              </div>
+                              <div className="card-footer-label">CLASSIC CINEMA ARCHIVE</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="collections-pagination">
+                      <button className="pag-btn">&larr;</button>
+                      <button className="pag-number active">01</button>
+                      <button className="pag-number">02</button>
+                      <button className="pag-number">03</button>
+                      <button className="pag-btn">&rarr;</button>
+                    </div>
+                  </div>
+                );
+              } else if (activeNav === 'FILMMAKERS') {
+                return (
+                  <div className="filmmakers-container">
+                    <div className="filmmakers-header-block">
+                      <div className="filmmakers-header-top">
+                        <h1 className="filmmakers-main-title font-heading-bebas">FILMMAKERS</h1>
+                        <span className="filmmakers-count-badge">08 FILMMAKERS</span>
+                      </div>
+                      <div className="accent-bar-small" />
+                      <div className="filmmakers-header-bottom">
+                        <div className="filmmakers-subtitle">
+                          <p>The visionaries behind timeless stories.</p>
+                          <p>Explore collections by filmmaker.</p>
+                        </div>
+                        <div className="filmmakers-sort-control">
+                          <span className="sort-label">SORT BY</span>
+                          <button className="sort-dropdown-trigger">
+                            A &ndash; Z <span className="chevron-down">&#9662;</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="filmmakers-table">
+                      <div className="table-header">
+                        <span className="th-filmmaker">FILMMAKER</span>
+                        <span className="th-works">NOTABLE WORKS</span>
+                        <span className="th-reels">REELS IN ARCHIVE</span>
+                      </div>
+
+                      <div className="table-body">
+                        {filmmakers.map((director, i) => (
+                          <div key={director.name} className="filmmaker-row">
+                            <div className="col-filmmaker">
+                              <span className="director-index">{(i + 1).toString().padStart(2, '0')}</span>
+                              <span className="director-name">{director.name}</span>
+                            </div>
+                            <div className="col-works">
+                              {director.works.map((work, wIdx) => (
+                                <React.Fragment key={work}>
+                                  {wIdx > 0 && <span className="work-dot">&bull;</span>}
+                                  <span className="work-title">{work}</span>
+                                </React.Fragment>
+                              ))}
+                            </div>
+                            <div className="col-reels">
+                              <span className="reels-count">{director.reels}</span>
+                            </div>
+                            <div className="col-arrow">
+                              <span className="arrow-indicator">&rarr;</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              } else if (activeNav === 'CONTACT') {
+                return (
+                  <div className="contact-container">
+                    <div className="contact-left">
+                      <span className="contact-badge">INQUIRIES</span>
+                      <h1 className="contact-title font-heading-bebas">GET IN TOUCH WITH R-35</h1>
+                      <div className="accent-bar-large" />
+                      <div className="contact-info-block">
+                        <div className="info-item">
+                          <span className="info-label">HEADQUARTERS</span>
+                          <span className="info-val">35mm Vault St, London, EC1A 4HD</span>
+                        </div>
+                        <div className="info-item">
+                          <span className="info-label">EMAIL</span>
+                          <span className="info-val">archive@r-35.com</span>
+                        </div>
+                        <div className="info-item">
+                          <span className="info-label">PHONE</span>
+                          <span className="info-val">+44 (0) 20 7946 0192</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="contact-right">
+                      <form className="contact-form" onSubmit={(e) => { e.preventDefault(); e.target.reset(); alert('Inquiry sent successfully.'); }}>
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label className="form-label">NAME</label>
+                            <input type="text" className="form-input" placeholder="Your name" required />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">EMAIL</label>
+                            <input type="email" className="form-input" placeholder="Your email" required />
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">SUBJECT</label>
+                          <input type="text" className="form-input" placeholder="Acquisitions, Sales, etc." required />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">MESSAGE</label>
+                          <textarea className="form-textarea" placeholder="Describe your inquiry in detail..." required></textarea>
+                        </div>
+                        <button type="submit" className="contact-submit-btn">
+                          SUBMIT FORM <span className="arrow-wide">&rarr;</span>
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                );
+              } else {
+                // Default activeNav === 'HOME' Page view
+                return (
+                  <>
+                    {/* HERO CORE SHOWCASE SECTION */}
+                    <section className="hero-section">
+                      <div className="hero-left">
+                        <h1 className="hero-logo-large">R-35</h1>
+                        <div className="accent-bar-large" />
+                        <h2 className="hero-tagline">COLLECTIBLE<br />35MM FILM REELS.</h2>
+                        <p className="hero-description">
+                          Rare film. Verified history.<br />Preserved for the future.
+                        </p>
+                        <a href="#collection" className="browse-link" onClick={(e) => { e.preventDefault(); handleNavClick('COLLECTION'); }}>
+                          BROWSE ARCHIVE <span className="arrow">&rarr;</span>
+                        </a>
+                      </div>
+
+                      <div className="hero-right">
+                        <div className="portrait-container">
+                          <img 
+                            src="/assets/halftone/katsuhiro.png" 
+                            alt="Katsuhiro Otomo Halftone Portrait" 
+                            className="halftone-portrait"
+                          />
+                          <div className="portrait-metadata">
+                            <span className="meta-name">KATSUHIRO OTOMO</span>
+                            <span className="meta-role">DIRECTOR</span>
+                            <span className="meta-title">AKIRA</span>
+                            <span className="meta-year">1988</span>
+                            <div className="meta-line" />
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* BOTTOM FEATURED ARCHIVE BAR */}
+                    <section className="featured-section">
+                      <div className="featured-sidebar">
+                        <span className="vertical-label">FEATURED ARCHIVE</span>
+                      </div>
+
+                      <div className="featured-content">
+                        <div className="featured-header">
+                          <a href="#collection" className="view-all-link" onClick={(e) => { e.preventDefault(); handleNavClick('COLLECTION'); }}>
+                            VIEW ALL ARCHIVE <span className="arrow">&rarr;</span>
+                          </a>
+                        </div>
+
+                        <div className="cards-grid">
+                          {homeMovies.map((movie) => (
+                            <div 
+                              key={movie.id} 
+                              className="movie-card" 
+                              onClick={() => openProductPage(movie)}
+                            >
+                              <div className="card-number">{movie.id}</div>
+                              <div className="card-body">
+                                <div className="poster-wrapper">
+                                  <img src={movie.poster} alt={`${movie.title} Movie Poster`} className="poster-img" />
+                                </div>
+                                <div className="card-details">
+                                  <div className="movie-info">
+                                    <h4 className="movie-title">{movie.title}</h4>
+                                    <div className="movie-specs">
+                                      <span>DIR. {movie.director}</span>
+                                      <span>{movie.year}</span>
+                                      <span>{movie.spec1}</span>
+                                      <span>{movie.spec2}</span>
+                                    </div>
+                                  </div>
+                                  <div className="movie-footer">
+                                    <span className="price">{movie.price}</span>
+                                    <span className="action-arrow">&rarr;</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </section>
+                  </>
+                );
+              }
+            })()}
+          </main>
+        </>
+      )}
 
         {/* ==========================================================
            REUSABLE DYNAMIC PRODUCT DETAIL VIEW OVERLAY
@@ -1493,10 +1962,43 @@ export default function App() {
                     <button className="form-back-btn" onClick={() => setCheckoutStep(1)}>&larr; BACK TO CHECKOUT</button>
                     <button
                       className="form-next-btn"
-                      onClick={() => {
+                      onClick={async () => {
                         const ref = 'R35-' + Date.now().toString(36).toUpperCase();
                         setOrderRef(ref);
                         setOrderedItems([...cartItems]); // snapshot before clearing
+
+                        try {
+                          const subtotal = cartItems.reduce((sum, item) => sum + (parseFloat(item.price.replace('$', '')) * item.quantity), 0);
+                          const shippingCostNow = shippingMethod === 'express' ? 35 : 15;
+                          const totalNow = subtotal + shippingCostNow;
+
+                          const { error } = await supabase.from('orders').insert([
+                            {
+                              order_reference: ref,
+                              full_name: billingInfo.fullName,
+                              email: billingInfo.email,
+                              phone: billingInfo.phone,
+                              country: billingInfo.country,
+                              address_line: billingInfo.address,
+                              apartment: billingInfo.apt,
+                              city: billingInfo.city,
+                              state: billingInfo.state,
+                              zip_code: billingInfo.zip,
+                              shipping_method: shippingMethod,
+                              subtotal: subtotal,
+                              shipping_cost: shippingCostNow,
+                              total_cost: totalNow,
+                              ordered_items: cartItems
+                            }
+                          ]);
+
+                          if (error) {
+                            console.error("Order insertion failed to Supabase:", error);
+                          }
+                        } catch (err) {
+                          console.warn("Could not sync order log to Supabase:", err);
+                        }
+
                         setCheckoutStep(3);
                         setCartItems([]);
                       }}
@@ -1575,7 +2077,6 @@ export default function App() {
             </div>
           );
         })()}
-      </main>
     </div>
   );
 }
