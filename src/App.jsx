@@ -321,6 +321,45 @@ export default function App() {
   const [isAddedToCart, setIsAddedToCart] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // ── Auth and Profile states ──
+  const [user, setUser] = useState(null);
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const [authFullName, setAuthFullName] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false);
+  const [showSignUpConfirmPassword, setShowSignUpConfirmPassword] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [userOrders, setUserOrders] = useState([]);
+  const [isAuthWarningOpen, setIsAuthWarningOpen] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user && (activeNav === 'PROFILE' || activeNav === 'VAULT-ID')) {
+      supabase.from('orders')
+        .select('*')
+        .eq('email', user.email)
+        .order('created_at', { ascending: false })
+        .then(({ data, error }) => {
+          if (data) setUserOrders(data);
+        });
+    }
+  }, [user, activeNav]);
+
   // ── Checkout multi-step flow state ──
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isCheckoutActive, setIsCheckoutActive] = useState(false);
@@ -509,6 +548,10 @@ export default function App() {
 
   // Add to cart with micro-animation
   const handleAddToCart = (movie) => {
+    if (!user) {
+      setIsAuthWarningOpen(true);
+      return;
+    }
     setCartItems(prev => {
       const existing = prev.find(item => item.title === movie.title);
       if (existing) {
@@ -542,6 +585,352 @@ export default function App() {
   }, 0);
   const shipping = cartItems.length === 0 ? 0 : 45.00;
   const total = subtotal + shipping;
+
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      if (isSignUpMode) {
+        if (authPassword !== authConfirmPassword) {
+          throw new Error("Passwords do not match!");
+        }
+        const { data, error } = await supabase.auth.signUp({
+          email: authEmail,
+          password: authPassword,
+          options: {
+            data: {
+              full_name: authFullName,
+            }
+          }
+        });
+        if (error) throw error;
+        alert('Authentication keys registered! Please check your email inbox to verify your account session.');
+        setIsSignUpMode(false);
+        setAuthFullName('');
+        setAuthPassword('');
+        setAuthConfirmPassword('');
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: authEmail,
+          password: authPassword,
+        });
+        if (error) throw error;
+        handleNavClick('PROFILE');
+        setAuthPassword('');
+      }
+    } catch (err) {
+      setAuthError(err.message || 'System decryption error.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setUserOrders([]);
+    handleNavClick('HOME');
+  };
+
+  const renderAuth = () => {
+    return (
+      <div className="auth-pane-container">
+        <div className="auth-console-box">
+          <div className="console-tab-bar">
+            <button 
+              className={`console-tab ${!isSignUpMode ? 'active' : ''}`}
+              onClick={() => { setIsSignUpMode(false); setAuthError(''); }}
+            >
+              SIGN IN
+            </button>
+            <button 
+              className={`console-tab ${isSignUpMode ? 'active' : ''}`}
+              onClick={() => { setIsSignUpMode(true); setAuthError(''); }}
+            >
+              SIGN UP
+            </button>
+          </div>
+
+          {authError && (
+            <div className="console-error-banner">
+              <span className="error-icon">⚠️</span>
+              <span className="error-text">{authError}</span>
+            </div>
+          )}
+
+          {!isSignUpMode ? (
+            /* ==========================================
+               SIGN IN VIEW (MATCHING DESIGN INSPIRATION)
+               ========================================== */
+            <form className="console-auth-form" onSubmit={handleAuthSubmit}>
+              <div className="console-form-group">
+                <label className="console-label">EMAIL</label>
+                <input 
+                  type="email" 
+                  className="console-input" 
+                  placeholder="enter your email" 
+                  value={authEmail} 
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  required 
+                />
+              </div>
+              
+              <div className="console-form-group">
+                <label className="console-label">PASSWORD</label>
+                <div className="password-input-wrapper">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    className="console-input" 
+                    placeholder="enter your password" 
+                    value={authPassword} 
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    required 
+                  />
+                  <button 
+                    type="button" 
+                    className="password-toggle-eye"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-utils-row">
+                <label className="checkbox-container">
+                  <input type="checkbox" className="console-checkbox" />
+                  <span className="checkbox-label">REMEMBER ME</span>
+                </label>
+                <a href="#forgot" className="forgot-password-link" onClick={(e) => { e.preventDefault(); alert("Auth key recovery terminal engaged. System notification transmitted."); }}>
+                  FORGOT PASSWORD?
+                </a>
+              </div>
+              
+              <button type="submit" className="console-submit-btn" disabled={authLoading}>
+                {authLoading ? 'DECRYPTING SEGMENT...' : 'SIGN IN'}
+              </button>
+
+              <div className="console-divider-or">
+                <span className="divider-line" />
+                <span className="divider-text">OR</span>
+                <span className="divider-line" />
+              </div>
+
+              <button 
+                type="button" 
+                className="console-google-btn"
+                onClick={async () => {
+                  setAuthLoading(true);
+                  try {
+                    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+                    if (error) throw error;
+                  } catch (err) {
+                    setAuthError(err.message || 'OAuth verification failed.');
+                  } finally {
+                    setAuthLoading(false);
+                  }
+                }}
+              >
+                <span className="google-icon-svg">G</span>
+                <span className="google-btn-text">CONTINUE WITH GOOGLE</span>
+              </button>
+            </form>
+          ) : (
+            /* ==========================================
+               SIGN UP VIEW (MATCHING DESIGN INSPIRATION)
+               ========================================== */
+            <form className="console-auth-form" onSubmit={handleAuthSubmit}>
+              <div className="console-form-group">
+                <label className="console-label">FULL NAME</label>
+                <input 
+                  type="text" 
+                  className="console-input" 
+                  placeholder="enter your full name" 
+                  value={authFullName} 
+                  onChange={(e) => setAuthFullName(e.target.value)}
+                  required 
+                />
+              </div>
+
+              <div className="console-form-group">
+                <label className="console-label">EMAIL</label>
+                <input 
+                  type="email" 
+                  className="console-input" 
+                  placeholder="enter your email" 
+                  value={authEmail} 
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  required 
+                />
+              </div>
+              
+              <div className="console-form-group">
+                <label className="console-label">PASSWORD</label>
+                <div className="password-input-wrapper">
+                  <input 
+                    type={showSignUpPassword ? "text" : "password"} 
+                    className="console-input" 
+                    placeholder="create a password" 
+                    value={authPassword} 
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    required 
+                  />
+                  <button 
+                    type="button" 
+                    className="password-toggle-eye"
+                    onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                  >
+                    {showSignUpPassword ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="console-form-group">
+                <label className="console-label">CONFIRM PASSWORD</label>
+                <div className="password-input-wrapper">
+                  <input 
+                    type={showSignUpConfirmPassword ? "text" : "password"} 
+                    className="console-input" 
+                    placeholder="confirm your password" 
+                    value={authConfirmPassword} 
+                    onChange={(e) => setAuthConfirmPassword(e.target.value)}
+                    required 
+                  />
+                  <button 
+                    type="button" 
+                    className="password-toggle-eye"
+                    onClick={() => setShowSignUpConfirmPassword(!showSignUpConfirmPassword)}
+                  >
+                    {showSignUpConfirmPassword ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-utils-row">
+                <label className="checkbox-container">
+                  <input type="checkbox" className="console-checkbox" required />
+                  <span className="checkbox-label">
+                    I AGREE TO THE <span className="highlight-red">TERMS & PRIVACY POLICY</span>
+                  </span>
+                </label>
+              </div>
+              
+              <button type="submit" className="console-submit-btn" disabled={authLoading}>
+                {authLoading ? 'CREATING KEYS...' : 'CREATE ACCOUNT'}
+              </button>
+
+              <div className="console-divider-or">
+                <span className="divider-line" />
+                <span className="divider-text">OR</span>
+                <span className="divider-line" />
+              </div>
+
+              <button 
+                type="button" 
+                className="console-google-btn"
+                onClick={async () => {
+                  setAuthLoading(true);
+                  try {
+                    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+                    if (error) throw error;
+                  } catch (err) {
+                    setAuthError(err.message || 'OAuth verification failed.');
+                  } finally {
+                    setAuthLoading(false);
+                  }
+                }}
+              >
+                <span className="google-icon-svg">G</span>
+                <span className="google-btn-text">SIGN UP WITH GOOGLE</span>
+              </button>
+            </form>
+          )}
+
+          <div className="auth-footer-agreement">
+            By continuing, you agree to our <span className="highlight-red">Terms of Service</span> and <span className="highlight-red">Privacy Policy</span>.
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderProfile = () => {
+    return (
+      <div className="profile-pane-container">
+        <div className="profile-badge-card">
+          <div className="badge-scanner-line" />
+          <div className="badge-header">
+            <span className="badge-org">R-35 FILM VAULT Pres.</span>
+            <span className="badge-level">LEVEL 01 ARCHIVIST</span>
+          </div>
+
+          <div className="badge-avatar-row">
+            <div className="badge-avatar">
+              <span className="avatar-char">{(user?.email?.[0] || 'A').toUpperCase()}</span>
+              <div className="avatar-grid-overlay" />
+            </div>
+            <div className="badge-meta">
+              <h2 className="badge-username">{user?.email?.split('@')[0].toUpperCase()}</h2>
+              <span className="badge-sub">{user?.email}</span>
+              <span className="badge-status-tag">SECURE SESSION VERIFIED</span>
+            </div>
+          </div>
+
+          <div className="badge-bar-code">
+            <div className="bar-code-stripes" />
+            <span className="bar-code-num">ID: {user?.id?.substring(0, 18).toUpperCase()}</span>
+          </div>
+        </div>
+
+        <div className="profile-orders-ledger">
+          <h2 className="ledger-title font-heading-bebas">ACQUISITION LOG LEDGER</h2>
+          <div className="accent-bar-ledger" />
+          
+          {userOrders.length === 0 ? (
+            <div className="ledger-empty-box">
+              <span className="empty-icon">📂</span>
+              <p className="empty-title">NO PHYSICAL REELS ACQUIRED YET</p>
+              <p className="empty-desc">Your personal vault acquisitions ledger is currently empty. Visit the reels collection catalog to request motion picture reels.</p>
+              <button className="ledger-shop-btn" onClick={() => handleNavClick('COLLECTION')}>
+                BROWSE COLLECTIBLES →
+              </button>
+            </div>
+          ) : (
+            <div className="ledger-scroll-area">
+              {userOrders.map((order) => (
+                <div key={order.id} className="ledger-order-row">
+                  <div className="row-left">
+                    <span className="order-ref font-heading-bebas">{order.order_reference}</span>
+                    <span className="order-date">{new Date(order.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <div className="row-center">
+                    <div className="order-items-names">
+                      {order.ordered_items && order.ordered_items.map((item, idx) => (
+                        <div key={idx} className="order-item-chip">
+                          🎥 {item.title} ({item.quantity}x)
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="row-right">
+                    <span className="order-cost">{order.total_cost ? `$${parseFloat(order.total_cost).toFixed(2)}` : '─'}</span>
+                    <span className="order-status-badge">SECURED</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="ledger-actions">
+            <button className="logout-btn" onClick={handleLogout}>
+              DE-AUTHORIZE ACCESS KEYS [ LOGOUT ]
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className={`app-layout ${isPreloaderExiting ? 'preloader-done' : ''} ${isMobile ? 'app-mobile-mode' : ''} ${isVaultAlertMode ? 'vault-alert-on' : ''}`}>
@@ -768,6 +1157,10 @@ export default function App() {
                     </form>
                   </div>
                 );
+              } else if (activeNav === 'AUTH' || activeNav === 'LOGIN') {
+                return renderAuth();
+              } else if (activeNav === 'PROFILE') {
+                return renderProfile();
               } else {
                 return (
                   <div className="m-home-pane">
@@ -910,7 +1303,10 @@ export default function App() {
                   ['COLLECTION', 'REELS [08]', '\u25A3'],
                   ['FILMMAKERS', 'CATALOG [08]', '\u2630'],
                   ['ABOUT', 'INFO [NUM]', '\u25B2'],
-                  ['CONTACT', 'INBOX [SEC]', '\u2709']
+                  ['CONTACT', 'INBOX [SEC]', '\u2709'],
+                  ...(user 
+                    ? [['PROFILE', 'VAULT-ID [01]', '👤']] 
+                    : [['AUTH', 'SECURE-IN', '🔑']])
                 ].map(([navId, label, symbol]) => (
                   <button
                     key={navId}
@@ -942,7 +1338,9 @@ export default function App() {
                    activeNav === 'COLLECTION' ? '\u25A3 REELS' :
                    activeNav === 'FILMMAKERS' ? '\u2630 CATALOG' :
                    activeNav === 'ABOUT' ? '\u25B2 INFO' :
-                   '\u2709 INBOX'}
+                   activeNav === 'CONTACT' ? '\u2709 INBOX' :
+                   activeNav === 'PROFILE' ? '👤 VAULT-ID' :
+                   '🔑 SECURE-IN'}
                 </span>
                 <span className="trigger-icon-chevron">&#9652;</span>
               </button>
@@ -967,11 +1365,18 @@ export default function App() {
             <nav className="sidebar-nav">
               <div className="accent-bar" />
               <ul className="nav-list">
-                {navItems.map((item) => (
+                {[
+                  'HOME',
+                  'COLLECTION',
+                  'FILMMAKERS',
+                  'ABOUT',
+                  'CONTACT',
+                  ...(user ? ['PROFILE'] : ['LOGIN / SIGNUP'])
+                ].map((item) => (
                   <li key={item}>
                     <a
                       href={`#${item.toLowerCase()}`}
-                      className={`nav-item ${activeNav === item && !selectedMovie ? 'active' : ''}`}
+                      className={`nav-item ${(activeNav === item || (item === 'LOGIN / SIGNUP' && activeNav === 'AUTH')) && !selectedMovie ? 'active' : ''}`}
                       onClick={(e) => {
                         e.preventDefault();
                         handleNavClick(item);
@@ -1326,6 +1731,10 @@ export default function App() {
                     </div>
                   </div>
                 );
+              } else if (activeNav === 'AUTH' || activeNav === 'LOGIN / SIGNUP') {
+                return renderAuth();
+              } else if (activeNav === 'PROFILE') {
+                return renderProfile();
               } else {
                 // Default activeNav === 'HOME' Page view
                 return (
@@ -2077,6 +2486,57 @@ export default function App() {
             </div>
           );
         })()}
+
+      {isAuthWarningOpen && (
+        <div className="cartoon-warning-overlay">
+          <div className="cartoon-warning-box theme-dark-vault">
+            <div className="cartoon-warning-header theme-dark-vault">
+              <span className="warning-status-dot red blink" />
+              <span className="warning-status-dot grey" />
+              <span className="warning-status-dot grey" />
+              <span className="cartoon-warning-title">VAULT LOCKDOWN // ACCESS RESTRICTED</span>
+              <button 
+                className="cartoon-warning-close-btn theme-dark-vault" 
+                onClick={() => setIsAuthWarningOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="cartoon-warning-body theme-dark-vault">
+              <div className="cartoon-warning-icon theme-dark-vault">
+                <span className="warning-eyes theme-dark-vault">🚨</span>
+                <span className="warning-excl theme-dark-vault">⚠️</span>
+              </div>
+              
+              <h2 className="cartoon-warning-heading theme-dark-vault font-heading-bebas">HALT! AUTHENTICATION REQUIRED</h2>
+              <p className="cartoon-warning-message theme-dark-vault">
+                Whoops! You are trying to acquire physical 35mm motion picture celluloid reels as a <strong>GUEST SPECTATOR</strong>.
+                <br /><br />
+                Archival regulations require a verified <strong>Operator Account</strong> to decrypt print pricing and unlock checkouts. Secure your keys now!
+              </p>
+              
+              <div className="cartoon-warning-actions theme-dark-vault">
+                <button 
+                  className="cartoon-btn-primary theme-dark-vault"
+                  onClick={() => {
+                    setIsAuthWarningOpen(false);
+                    handleNavClick(user ? 'PROFILE' : 'LOGIN / SIGNUP');
+                  }}
+                >
+                  DECRYPT ACCESS KEY (LOGIN) →
+                </button>
+                <button 
+                  className="cartoon-btn-secondary theme-dark-vault"
+                  onClick={() => setIsAuthWarningOpen(false)}
+                >
+                  DISMISS VAULT ALERT ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
