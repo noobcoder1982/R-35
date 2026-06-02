@@ -335,6 +335,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [userOrders, setUserOrders] = useState([]);
   const [isAuthWarningOpen, setIsAuthWarningOpen] = useState(false);
+  const [isPricingYearly, setIsPricingYearly] = useState(false);
 
   // ── Wishlist, Search, and Dropdown states ──
   const [wishlistItems, setWishlistItems] = useState(() => {
@@ -349,6 +350,179 @@ export default function App() {
   const [isWishlistActive, setIsWishlistActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+
+  // ── High-Fidelity Custom Profile states ──
+  const [activePlan, setActivePlan] = useState(() => {
+    return localStorage.getItem('r35_active_plan') || 'None';
+  });
+  const [userFullName, setUserFullName] = useState(() => {
+    return localStorage.getItem('r35_user_fullname') || 'Yash Patel';
+  });
+  const [userPhone, setUserPhone] = useState(() => {
+    return localStorage.getItem('r35_user_phone') || '+91 98765 43210';
+  });
+  const [userDob, setUserDob] = useState(() => {
+    return localStorage.getItem('r35_user_dob') || '12 March 1998';
+  });
+  const [memberSince, setMemberSince] = useState(() => {
+    return localStorage.getItem('r35_member_since') || 'May 2024';
+  });
+  
+  // Shipping Address states
+  const [shipFullName, setShipFullName] = useState(() => {
+    return localStorage.getItem('r35_ship_name') || 'Yash Patel';
+  });
+  const [shipStreet, setShipStreet] = useState(() => {
+    return localStorage.getItem('r35_ship_street') || '123 Film Street, Andheri West';
+  });
+  const [shipCity, setShipCity] = useState(() => {
+    return localStorage.getItem('r35_ship_city') || 'Mumbai';
+  });
+  const [shipState, setShipState] = useState(() => {
+    return localStorage.getItem('r35_ship_state') || 'Maharashtra';
+  });
+  const [shipZip, setShipZip] = useState(() => {
+    return localStorage.getItem('r35_ship_zip') || '400053';
+  });
+  const [shipCountry, setShipCountry] = useState(() => {
+    return localStorage.getItem('r35_ship_country') || 'India';
+  });
+  const [shipPhone, setShipPhone] = useState(() => {
+    return localStorage.getItem('r35_ship_phone') || '+91 98765 43210';
+  });
+
+  // Edit / Action Mode toggles
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  // Settings Console States
+  const [consoleTheme, setConsoleTheme] = useState(() => {
+    return localStorage.getItem('r35_console_theme') || 'red';
+  });
+  const [skipPreloader, setSkipPreloader] = useState(() => {
+    return localStorage.getItem('r35_skip_preloader') === 'true';
+  });
+  const [alertSound, setAlertSound] = useState(true);
+  const [orderNotifications, setOrderNotifications] = useState(true);
+  const [catalogAlerts, setCatalogAlerts] = useState(true);
+
+  // ── Onboarding state hooks ──
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [tempOnboardName, setTempOnboardName] = useState('');
+  const [tempOnboardPhone, setTempOnboardPhone] = useState('');
+  const [tempOnboardStreet, setTempOnboardStreet] = useState('');
+  const [tempOnboardCity, setTempOnboardCity] = useState('');
+  const [tempOnboardState, setTempOnboardState] = useState('');
+  const [tempOnboardZip, setTempOnboardZip] = useState('');
+  const [tempOnboardCountry, setTempOnboardCountry] = useState('');
+
+  // Watch user session to trigger onboarding modal
+  useEffect(() => {
+    if (user) {
+      const onboarded = localStorage.getItem('r35_onboarded_' + user.id);
+      if (!onboarded) {
+        setShowOnboarding(true);
+      }
+    } else {
+      setShowOnboarding(false);
+    }
+  }, [user]);
+
+  // Load user specific keys when session changes
+  useEffect(() => {
+    if (user) {
+      const storedName = localStorage.getItem('r35_user_fullname_' + user.id);
+      const storedPhone = localStorage.getItem('r35_user_phone_' + user.id);
+      const storedDob = localStorage.getItem('r35_user_dob_' + user.id);
+      const storedSince = localStorage.getItem('r35_member_since_' + user.id);
+      const storedPlan = localStorage.getItem('r35_active_plan_' + user.id);
+      
+      const storedShipName = localStorage.getItem('r35_ship_name_' + user.id);
+      const storedShipStreet = localStorage.getItem('r35_ship_street_' + user.id);
+      const storedShipCity = localStorage.getItem('r35_ship_city_' + user.id);
+      const storedShipState = localStorage.getItem('r35_ship_state_' + user.id);
+      const storedShipZip = localStorage.getItem('r35_ship_zip_' + user.id);
+      const storedShipCountry = localStorage.getItem('r35_ship_country_' + user.id);
+      const storedShipPhone = localStorage.getItem('r35_ship_phone_' + user.id);
+
+      setUserFullName(storedName || 'Yash Patel');
+      setUserPhone(storedPhone || '+91 98765 43210');
+      setUserDob(storedDob || '12 March 1998');
+      setMemberSince(storedSince || 'May 2024');
+      setActivePlan(storedPlan || 'None');
+      
+      setShipFullName(storedShipName || storedName || 'Yash Patel');
+      setShipStreet(storedShipStreet || '123 Film Street, Andheri West');
+      setShipCity(storedShipCity || 'Mumbai');
+      setShipState(storedShipState || 'Maharashtra');
+      setShipZip(storedShipZip || '400053');
+      setShipCountry(storedShipCountry || 'India');
+      setShipPhone(storedShipPhone || storedPhone || '+91 98765 43210');
+    } else {
+      setUserFullName('Yash Patel');
+      setUserPhone('+91 98765 43210');
+      setUserDob('12 March 1998');
+      setMemberSince('May 2024');
+      setActivePlan('None');
+      
+      setShipFullName('Yash Patel');
+      setShipStreet('123 Film Street, Andheri West');
+      setShipCity('Mumbai');
+      setShipState('Maharashtra');
+      setShipZip('400053');
+      setShipCountry('India');
+      setShipPhone('+91 98765 43210');
+    }
+  }, [user]);
+
+  const handleOnboardingSubmit = (e) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setUserFullName(tempOnboardName);
+    setUserPhone(tempOnboardPhone);
+    setShipFullName(tempOnboardName);
+    setShipStreet(tempOnboardStreet);
+    setShipCity(tempOnboardCity);
+    setShipState(tempOnboardState);
+    setShipZip(tempOnboardZip);
+    setShipCountry(tempOnboardCountry);
+    setShipPhone(tempOnboardPhone);
+    
+    const registryMonthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    setMemberSince(registryMonthYear);
+
+    localStorage.setItem('r35_user_fullname_' + user.id, tempOnboardName);
+    localStorage.setItem('r35_user_phone_' + user.id, tempOnboardPhone);
+    localStorage.setItem('r35_user_dob_' + user.id, '12 March 1998');
+    localStorage.setItem('r35_member_since_' + user.id, registryMonthYear);
+    
+    localStorage.setItem('r35_ship_name_' + user.id, tempOnboardName);
+    localStorage.setItem('r35_ship_street_' + user.id, tempOnboardStreet);
+    localStorage.setItem('r35_ship_city_' + user.id, tempOnboardCity);
+    localStorage.setItem('r35_ship_state_' + user.id, tempOnboardState);
+    localStorage.setItem('r35_ship_zip_' + user.id, tempOnboardZip);
+    localStorage.setItem('r35_ship_country_' + user.id, tempOnboardCountry);
+    localStorage.setItem('r35_ship_phone_' + user.id, tempOnboardPhone);
+    
+    localStorage.setItem('r35_onboarded_' + user.id, 'true');
+
+    setShowOnboarding(false);
+    alert("Archivist details encrypted and onboarded successfully! Welcome to the vault.");
+  };
+
+  // Effect to apply dynamic theme accent colors
+  useEffect(() => {
+    document.body.className = '';
+    if (consoleTheme === 'amber') {
+      document.body.classList.add('accent-theme-amber');
+    } else if (consoleTheme === 'green') {
+      document.body.classList.add('accent-theme-green');
+    } else if (consoleTheme === 'blue') {
+      document.body.classList.add('accent-theme-blue');
+    }
+  }, [consoleTheme]);
 
   useEffect(() => {
     try {
@@ -529,6 +703,11 @@ export default function App() {
   const collectionMovies = moviesList.slice(4, 12);
 
   useEffect(() => {
+    if (skipPreloader) {
+      setIsPreloaderActive(false);
+      setIsPreloaderExiting(true);
+      return;
+    }
     // Dynamic status text ticker for high-fidelity brutalist preloader
     const timer1 = setTimeout(() => setPreloaderStatus('SCANNING NITRATE STORAGE BASE...'), 350);
     const timer2 = setTimeout(() => setPreloaderStatus('DECRYPTING CELLULOID ARCHIVES...'), 750);
@@ -788,17 +967,6 @@ export default function App() {
                SIGN UP VIEW (MATCHING DESIGN INSPIRATION)
                ========================================== */
             <form className="console-auth-form" onSubmit={handleAuthSubmit}>
-              <div className="console-form-group">
-                <label className="console-label">FULL NAME</label>
-                <input 
-                  type="text" 
-                  className="console-input" 
-                  placeholder="enter your full name" 
-                  value={authFullName} 
-                  onChange={(e) => setAuthFullName(e.target.value)}
-                  required 
-                />
-              </div>
 
               <div className="console-form-group">
                 <label className="console-label">EMAIL</label>
@@ -902,77 +1070,954 @@ export default function App() {
     );
   };
 
+  const handleDeleteAccount = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setUserOrders([]);
+    
+    // Clear all custom profile & session data
+    localStorage.removeItem('r35_active_plan');
+    localStorage.removeItem('r35_user_fullname');
+    localStorage.removeItem('r35_user_phone');
+    localStorage.removeItem('r35_user_dob');
+    localStorage.removeItem('r35_member_since');
+    localStorage.removeItem('r35_ship_name');
+    localStorage.removeItem('r35_ship_street');
+    localStorage.removeItem('r35_ship_city');
+    localStorage.removeItem('r35_ship_state');
+    localStorage.removeItem('r35_ship_zip');
+    localStorage.removeItem('r35_ship_country');
+    localStorage.removeItem('r35_ship_phone');
+    localStorage.removeItem('r35_cart');
+    localStorage.removeItem('r35_wishlist');
+    
+    // Reset state to initial SPECTATOR values
+    setActivePlan('None');
+    setUserFullName('Yash Patel');
+    setUserPhone('+91 98765 43210');
+    setUserDob('12 March 1998');
+    setShipFullName('Yash Patel');
+    setShipStreet('123 Film Street, Andheri West');
+    setShipCity('Mumbai');
+    setShipState('Maharashtra');
+    setShipZip('400053');
+    setShipCountry('India');
+    setShipPhone('+91 98765 43210');
+    setCartItems([]);
+    setWishlistItems([]);
+    setIsDeleteModalOpen(false);
+    alert("Operator Session and Vault access key successfully destroyed. Redirecting to SPECTATOR terminal.");
+    handleNavClick('HOME');
+  };
+
   const renderProfile = () => {
+    // Gather movies bought ever on this account from userOrders
+    const boughtMovies = [];
+    userOrders.forEach((order) => {
+      if (order.ordered_items && Array.isArray(order.ordered_items)) {
+        order.ordered_items.forEach((item) => {
+          // Look up full movie details from moviesCatalog to get its poster
+          const catalogMovie = moviesList.find(
+            (m) => m.title.toUpperCase() === item.title.toUpperCase() || m.id === item.id
+          );
+          
+          boughtMovies.push({
+            id: `${order.id}-${item.id}`,
+            title: item.title,
+            reference: `Order #${order.order_reference}`,
+            date: `Delivered on ${new Date(order.created_at).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            })}`,
+            price: item.price || '$249.00',
+            poster: catalogMovie?.poster || '/assets/vintage_film_reel.png',
+          });
+        });
+      }
+    });
+
+    // Seed/Fallback orders are high-fidelity movies instead of physical gear
+    const displayOrders = boughtMovies.length > 0 ? boughtMovies.slice(0, 3) : [
+      { id: 'seed-01', title: 'AKIRA', reference: 'Order #R35-1024', date: 'Delivered on May 20, 2024', price: '₹49,999', status: 'Delivered', poster: '/assets/akira_poster.jpg' },
+      { id: 'seed-02', title: 'ALIEN', reference: 'Order #R35-0987', date: 'Delivered on May 15, 2024', price: '₹18,999', status: 'Delivered', poster: '/assets/alien_poster.png' },
+      { id: 'seed-03', title: '2001: A SPACE ODYSSEY', reference: 'Order #R35-0956', date: 'Delivered on May 10, 2024', price: '₹24,999', status: 'Delivered', poster: '/assets/space_odyssey_poster.jpg' }
+    ];
+
+    const planName = activePlan === 'None' ? 'Basic' : activePlan;
+    const isPremium = activePlan === 'Collector' || activePlan === 'Archivist' || activePlan === 'Premium';
+
+    // Calculate total orders and spent details
+    const totalOrdersCount = boughtMovies.length > 0 ? boughtMovies.length : 12;
+    const totalSpentText = boughtMovies.length > 0 
+      ? '₹' + boughtMovies.reduce((sum, m) => sum + parseFloat((m.price || '').replace(/[^0-9.]/g, '') || 0), 0).toLocaleString() 
+      : '₹48,750';
+
     return (
-      <div className="profile-pane-container">
-        <div className="profile-badge-card">
-          <div className="badge-scanner-line" />
-          <div className="badge-header">
-            <span className="badge-org">R-35 FILM VAULT Pres.</span>
-            <span className="badge-level">LEVEL 01 ARCHIVIST</span>
+      <div className="profile-v2-container">
+        <div className="profile-v2-header">
+          <h1 className="profile-v2-title">My Profile</h1>
+          <p className="profile-v2-subtitle">Manage your personal information and account preferences.</p>
+        </div>
+
+        {/* Row 1: Profile card + 3 Stats Card aligned horizontally */}
+        <div className="profile-v2-row-1">
+          <div className="profile-v2-user-card">
+            <div className="profile-v2-avatar-container" onClick={() => alert("Avatar scan verified.")}>
+              <img src="/assets/editor_avatar.png" alt="Archivist Avatar" className="profile-v2-avatar-img" />
+              <div className="profile-v2-avatar-overlay">
+                <span className="avatar-cam-icon">📷</span>
+              </div>
+            </div>
+
+            <div className="profile-v2-user-info">
+              <div className="profile-v2-name-row">
+                <h2 className="profile-v2-user-name">{userFullName}</h2>
+                <span className="profile-v2-user-badge">
+                  {isPremium ? `${activePlan} Member` : 'Premium Member'}
+                </span>
+              </div>
+              <span className="profile-v2-user-email">{user?.email || 'yashpatel@gmail.com'}</span>
+              <span className="profile-v2-user-phone">{userPhone}</span>
+              <span className="profile-v2-user-since">Member since {memberSince}</span>
+            </div>
           </div>
 
-          <div className="badge-avatar-row">
-            <div className="badge-avatar">
-              <span className="avatar-char">{(user?.email?.[0] || 'A').toUpperCase()}</span>
-              <div className="avatar-grid-overlay" />
+          <div className="profile-v2-stats-column">
+            {/* Total Orders Stats */}
+            <div className="stats-card-v2" onClick={() => {
+              const el = document.querySelector('.profile-v2-orders-list');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}>
+              <div className="stats-card-icon-box orders">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M3 6h18M16 10a4 4 0 01-8 0" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div className="stats-card-details">
+                <span className="stats-card-label">Total Orders</span>
+                <strong className="stats-card-number">{totalOrdersCount}</strong>
+              </div>
+              <span className="stats-card-link red">View all orders &rarr;</span>
             </div>
-            <div className="badge-meta">
-              <h2 className="badge-username">{user?.email?.split('@')[0].toUpperCase()}</h2>
-              <span className="badge-sub">{user?.email}</span>
-              <span className="badge-status-tag">SECURE SESSION VERIFIED</span>
-            </div>
-          </div>
 
-          <div className="badge-bar-code">
-            <div className="bar-code-stripes" />
-            <span className="bar-code-num">ID: {user?.id?.substring(0, 18).toUpperCase()}</span>
+            {/* Total Spent Stats */}
+            <div className="stats-card-v2">
+              <div className="stats-card-icon-box spending">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M12 4v16M2 10h20" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div className="stats-card-details">
+                <span className="stats-card-label">Total Spent</span>
+                <strong className="stats-card-number">{totalSpentText}</strong>
+              </div>
+              <span className="stats-card-link green">View spending &rarr;</span>
+            </div>
+
+            {/* Member Level Stats */}
+            <div className="stats-card-v2" onClick={() => handleNavClick('PRICING')}>
+              <div className="stats-card-icon-box level">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div className="stats-card-details">
+                <span className="stats-card-label">Member Level</span>
+                <strong className="stats-card-number">{planName}</strong>
+              </div>
+              <span className="stats-card-link blue">View benefits &rarr;</span>
+            </div>
           </div>
         </div>
 
-        <div className="profile-orders-ledger">
-          <h2 className="ledger-title font-heading-bebas">ACQUISITION LOG LEDGER</h2>
-          <div className="accent-bar-ledger" />
-          
-          {userOrders.length === 0 ? (
-            <div className="ledger-empty-box">
-              <span className="empty-icon">📂</span>
-              <p className="empty-title">NO PHYSICAL REELS ACQUIRED YET</p>
-              <p className="empty-desc">Your personal vault acquisitions ledger is currently empty. Visit the reels collection catalog to request motion picture reels.</p>
-              <button className="ledger-shop-btn" onClick={() => handleNavClick('COLLECTION')}>
-                BROWSE COLLECTIBLES →
-              </button>
+        {/* Row 2: Recent Orders, Account Details, Shipping Address */}
+        <div className="profile-v2-row-2">
+          {/* Card 1: Recent Orders */}
+          <div className="profile-v2-card">
+            <div className="profile-v2-card-header">
+              <h3 className="profile-v2-card-title">Recent Orders</h3>
+              <span className="profile-v2-card-link" onClick={() => handleNavClick('COLLECTION')}>View all &rarr;</span>
             </div>
-          ) : (
-            <div className="ledger-scroll-area">
-              {userOrders.map((order) => (
-                <div key={order.id} className="ledger-order-row">
-                  <div className="row-left">
-                    <span className="order-ref font-heading-bebas">{order.order_reference}</span>
-                    <span className="order-date">{new Date(order.created_at).toLocaleDateString()}</span>
+            
+            <div className="profile-v2-orders-list">
+              {displayOrders.map((order, idx) => (
+                <div key={order.id || idx} className="order-item-v2">
+                  <div className="order-item-icon-box">
+                    <img src={order.poster} alt={order.title} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }} />
                   </div>
-                  <div className="row-center">
-                    <div className="order-items-names">
-                      {order.ordered_items && order.ordered_items.map((item, idx) => (
-                        <div key={idx} className="order-item-chip">
-                          🎥 {item.title} ({item.quantity}x)
-                        </div>
-                      ))}
-                    </div>
+                  <div className="order-item-details">
+                    <span className="order-item-title">{order.title}</span>
+                    <span className="order-item-meta">{order.reference}</span>
+                    <span className="order-item-meta">{order.date}</span>
                   </div>
-                  <div className="row-right">
-                    <span className="order-cost">{order.total_cost ? `$${parseFloat(order.total_cost).toFixed(2)}` : '─'}</span>
-                    <span className="order-status-badge">SECURED</span>
+                  <div className="order-item-pricing">
+                    <span className="order-item-price">{order.price}</span>
+                    <span className="order-item-status">Delivered</span>
                   </div>
                 </div>
               ))}
             </div>
-          )}
 
-          <div className="ledger-actions">
-            <button className="logout-btn" onClick={handleLogout}>
-              DE-AUTHORIZE ACCESS KEYS [ LOGOUT ]
+            <button className="profile-v2-btn-bottom" onClick={() => handleNavClick('COLLECTION')}>
+              View All Orders
             </button>
+          </div>
+
+          {/* Card 2: Account Details */}
+          <div className="profile-v2-card">
+            <div className="profile-v2-card-header">
+              <h3 className="profile-v2-card-title">Account Details</h3>
+              {isEditingProfile ? (
+                <span className="profile-v2-card-link" onClick={() => setIsEditingProfile(false)}>Cancel</span>
+              ) : (
+                <span className="profile-v2-card-link" onClick={() => setIsEditingProfile(true)}>Edit</span>
+              )}
+            </div>
+
+            {isEditingProfile ? (
+              <form className="profile-v2-edit-form" onSubmit={(e) => {
+                e.preventDefault();
+                localStorage.setItem('r35_user_fullname_' + user.id, userFullName);
+                localStorage.setItem('r35_user_phone_' + user.id, userPhone);
+                localStorage.setItem('r35_user_dob_' + user.id, userDob);
+                setIsEditingProfile(false);
+                alert("Vault operator profile details encrypted and updated!");
+              }}>
+                <div className="profile-v2-edit-group">
+                  <label className="profile-v2-edit-label">FULL NAME</label>
+                  <input 
+                    type="text" 
+                    className="profile-v2-edit-input" 
+                    value={userFullName} 
+                    onChange={(e) => setUserFullName(e.target.value)} 
+                    required 
+                  />
+                </div>
+                <div className="profile-v2-edit-group">
+                  <label className="profile-v2-edit-label">PHONE NUMBER</label>
+                  <input 
+                    type="text" 
+                    className="profile-v2-edit-input" 
+                    value={userPhone} 
+                    onChange={(e) => setUserPhone(e.target.value)} 
+                    required 
+                  />
+                </div>
+                <div className="profile-v2-edit-group">
+                  <label className="profile-v2-edit-label">DATE OF BIRTH</label>
+                  <input 
+                    type="text" 
+                    className="profile-v2-edit-input" 
+                    value={userDob} 
+                    onChange={(e) => setUserDob(e.target.value)} 
+                    required 
+                  />
+                </div>
+                
+                <div className="profile-v2-edit-actions">
+                  <button type="submit" className="edit-action-btn save">SAVE CHANGES</button>
+                </div>
+              </form>
+            ) : (
+              <div className="profile-v2-details-list">
+                <div className="profile-v2-detail-row" onClick={() => setIsEditingProfile(true)}>
+                  <span className="profile-v2-detail-label">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '8px', verticalAlign: 'middle', opacity: 0.6 }}>
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="12" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Full Name
+                  </span>
+                  <span className="profile-v2-detail-value">
+                    {userFullName}
+                    <span className="profile-v2-detail-chevron">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.4 }}>
+                        <polyline points="9 18 15 12 9 6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  </span>
+                </div>
+                
+                <div className="profile-v2-detail-row" onClick={() => setIsEditingProfile(true)}>
+                  <span className="profile-v2-detail-label">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '8px', verticalAlign: 'middle', opacity: 0.6 }}>
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" strokeLinecap="round" strokeLinejoin="round" />
+                      <polyline points="22,6 12,13 2,6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Email Address
+                  </span>
+                  <span className="profile-v2-detail-value" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                    {user?.email || 'yashpatel@gmail.com'}
+                    <span className="profile-v2-detail-chevron">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.4 }}>
+                        <polyline points="9 18 15 12 9 6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  </span>
+                </div>
+
+                <div className="profile-v2-detail-row" onClick={() => setIsEditingProfile(true)}>
+                  <span className="profile-v2-detail-label">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '8px', verticalAlign: 'middle', opacity: 0.6 }}>
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Phone Number
+                  </span>
+                  <span className="profile-v2-detail-value">
+                    {userPhone}
+                    <span className="profile-v2-detail-chevron">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.4 }}>
+                        <polyline points="9 18 15 12 9 6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  </span>
+                </div>
+
+                <div className="profile-v2-detail-row" onClick={() => setIsEditingProfile(true)}>
+                  <span className="profile-v2-detail-label">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '8px', verticalAlign: 'middle', opacity: 0.6 }}>
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <line x1="16" y1="2" x2="16" y2="6" strokeLinecap="round" strokeLinejoin="round" />
+                      <line x1="8" y1="2" x2="8" y2="6" strokeLinecap="round" strokeLinejoin="round" />
+                      <line x1="3" y1="10" x2="21" y2="10" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Date of Birth
+                  </span>
+                  <span className="profile-v2-detail-value">
+                    {userDob}
+                    <span className="profile-v2-detail-chevron">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.4 }}>
+                        <polyline points="9 18 15 12 9 6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  </span>
+                </div>
+
+                <div className="profile-v2-detail-row" onClick={() => alert("Secure encryption restricts direct editing of passwords. Change in Auth console.")}>
+                  <span className="profile-v2-detail-label">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '8px', verticalAlign: 'middle', opacity: 0.6 }}>
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Password
+                  </span>
+                  <span className="profile-v2-detail-value">
+                    ••••••••
+                    <span className="profile-v2-detail-chevron">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.4 }}>
+                        <polyline points="9 18 15 12 9 6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Card 3: Shipping Address */}
+          <div className="profile-v2-card">
+            <div className="profile-v2-card-header">
+              <h3 className="profile-v2-card-title">Shipping Address</h3>
+              {isEditingAddress ? (
+                <span className="profile-v2-card-link" onClick={() => setIsEditingAddress(false)}>Cancel</span>
+              ) : (
+                <span className="profile-v2-card-link" onClick={() => setIsEditingAddress(true)}>Manage</span>
+              )}
+            </div>
+
+            {isEditingAddress ? (
+              <form className="profile-v2-edit-form" onSubmit={(e) => {
+                e.preventDefault();
+                localStorage.setItem('r35_ship_name_' + user.id, shipFullName);
+                localStorage.setItem('r35_ship_street_' + user.id, shipStreet);
+                localStorage.setItem('r35_ship_city_' + user.id, shipCity);
+                localStorage.setItem('r35_ship_state_' + user.id, shipState);
+                localStorage.setItem('r35_ship_zip_' + user.id, shipZip);
+                localStorage.setItem('r35_ship_country_' + user.id, shipCountry);
+                localStorage.setItem('r35_ship_phone_' + user.id, shipPhone);
+                setIsEditingAddress(false);
+                alert("Archival shipping coordinates registered!");
+              }}>
+                <div className="profile-v2-edit-group">
+                  <label className="profile-v2-edit-label">FULL NAME</label>
+                  <input type="text" className="profile-v2-edit-input" value={shipFullName} onChange={(e) => setShipFullName(e.target.value)} required />
+                </div>
+                <div className="profile-v2-edit-group">
+                  <label className="profile-v2-edit-label">STREET ADDRESS</label>
+                  <input type="text" className="profile-v2-edit-input" value={shipStreet} onChange={(e) => setShipStreet(e.target.value)} required />
+                </div>
+                <div className="profile-v2-edit-group">
+                  <label className="profile-v2-edit-label">CITY</label>
+                  <input type="text" className="profile-v2-edit-input" value={shipCity} onChange={(e) => setShipCity(e.target.value)} required />
+                </div>
+                <div className="profile-v2-edit-group">
+                  <label className="profile-v2-edit-label">STATE</label>
+                  <input type="text" className="profile-v2-edit-input" value={shipState} onChange={(e) => setShipState(e.target.value)} required />
+                </div>
+                <div className="profile-v2-edit-group">
+                  <label className="profile-v2-edit-label">ZIP CODE</label>
+                  <input type="text" className="profile-v2-edit-input" value={shipZip} onChange={(e) => setShipZip(e.target.value)} required />
+                </div>
+                <div className="profile-v2-edit-group">
+                  <label className="profile-v2-edit-label">COUNTRY</label>
+                  <input type="text" className="profile-v2-edit-input" value={shipCountry} onChange={(e) => setShipCountry(e.target.value)} required />
+                </div>
+                <div className="profile-v2-edit-group">
+                  <label className="profile-v2-edit-label">PHONE NUMBER</label>
+                  <input type="text" className="profile-v2-edit-input" value={shipPhone} onChange={(e) => setShipPhone(e.target.value)} required />
+                </div>
+                
+                <div className="profile-v2-edit-actions">
+                  <button type="submit" className="edit-action-btn save">SAVE ADDRESS</button>
+                </div>
+              </form>
+            ) : (
+              <div className="profile-v2-address-block">
+                <div className="address-house-icon-row">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--accent-red)', verticalAlign: 'middle' }}>
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" strokeLinecap="round" strokeLinejoin="round" />
+                    <polyline points="9 22 9 12 15 12 15 22" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="address-badge-v2">Default Address</span>
+                </div>
+                
+                <div className="profile-v2-address-text">
+                  <p style={{ fontWeight: 'bold', color: 'var(--text-white)' }}>{shipFullName}</p>
+                  <p>{shipStreet}, {shipCity}, {shipState} {shipZip}, {shipCountry}</p>
+                </div>
+                <span className="profile-v2-address-phone">{shipPhone}</span>
+
+                <button className="profile-v2-btn-bottom" style={{ marginTop: 'auto', borderStyle: 'dashed' }} onClick={() => setIsEditingAddress(true)}>
+                  + Add New Address
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Row 3: Premium Benefits Banner */}
+        <div className="profile-v2-row-3">
+          <div className="premium-benefit-banner">
+            <div className="premium-benefit-left">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div className="benefit-star-box-v2">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" style={{ color: '#fff' }}>
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="premium-benefit-headline">
+                    You're a Premium Member!
+                  </h3>
+                  <p className="premium-benefit-sub" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    Enjoy exclusive benefits and priority support.
+                  </p>
+                </div>
+              </div>
+              <div className="premium-benefit-list" style={{ marginTop: '1.2rem' }}>
+                <div className="premium-benefit-item">
+                  <span className="benefit-chk-circle">✓</span> <span style={{ color: '#fff' }}>Free Shipping</span>
+                </div>
+                <div className="premium-benefit-item">
+                  <span className="benefit-chk-circle">✓</span> <span style={{ color: '#fff' }}>Early Access</span>
+                </div>
+                <div className="premium-benefit-item">
+                  <span className="benefit-chk-circle">✓</span> <span style={{ color: '#fff' }}>Extended Warranty</span>
+                </div>
+                <div className="premium-benefit-item">
+                  <span className="benefit-chk-circle">✓</span> <span style={{ color: '#fff' }}>Priority Support</span>
+                </div>
+              </div>
+            </div>
+            <div className="premium-benefit-right">
+              <button className="premium-benefit-btn" onClick={() => handleNavClick('PRICING')}>
+                View All Benefits
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Delete Account Danger Zone */}
+        <div className="profile-v2-danger-zone">
+          <div className="danger-zone-left">
+            <h4 className="danger-zone-title">Danger Zone</h4>
+            <p className="danger-zone-desc">Permanently terminate your film vault credentials and completely erase all orders history.</p>
+          </div>
+          <button className="danger-zone-btn" onClick={() => setIsDeleteModalOpen(true)}>
+            Delete Account
+          </button>
+        </div>
+
+        {/* Delete Account Confirmation Modal */}
+        {isDeleteModalOpen && (
+          <div className="profile-modal-overlay-v2">
+            <div className="profile-modal-box-v2">
+              <h2 className="profile-modal-title">PURGE VAULT ACCOUNT?</h2>
+              <p className="profile-modal-desc">
+                WARNING: This action is irreversible. Deleting your operator keys will permanently delete all order history and subscription records from the R-35 console database.
+              </p>
+              <div className="profile-modal-actions">
+                <button className="profile-modal-btn confirm" onClick={handleDeleteAccount}>
+                  YES, DELETE ACCOUNT
+                </button>
+                <button className="profile-modal-btn cancel" onClick={() => setIsDeleteModalOpen(false)}>
+                  CANCEL PURGE
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderPricing = () => {
+    const handleSelectPlan = (planName) => {
+      if (!user) {
+        setIsAuthWarningOpen(true);
+        return;
+      }
+      setActivePlan(planName);
+      localStorage.setItem('r35_active_plan_' + user.id, planName);
+      alert(`${planName} Membership activated! Vault clearance granted!`);
+    };
+
+    return (
+      <div className="pricing-v2-container">
+        <div className="pricing-v2-top-row">
+          <div className="pricing-v2-header-block">
+            <h1 className="pricing-v2-title font-heading-bebas">PRICING PLANS</h1>
+            <div className="pricing-v2-accent-bar" />
+            <p className="pricing-v2-subtitle">
+              Choose the plan that fits your passion. <br className="desktop-only" />
+              Upgrade, downgrade or cancel anytime.
+            </p>
+          </div>
+          
+          <div className="pricing-v2-compare-card" onClick={() => alert("Feature comparison catalog verified.")}>
+            <div className="compare-card-icon-box">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9 11l2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="compare-card-text">
+              <span className="compare-card-title">NOT SURE WHICH PLAN?</span>
+              <span className="compare-card-desc">Compare features and find the perfect plan for you.</span>
+              <span className="compare-card-link-text">COMPARE PLANS &rarr;</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Toggle Switch */}
+        <div className="pricing-v2-toggle-bar">
+          <span className={`pricing-toggle-label ${!isPricingYearly ? 'active' : ''}`}>MONTHLY</span>
+          <button 
+            className={`pricing-toggle-switch ${isPricingYearly ? 'yearly' : 'monthly'}`}
+            onClick={() => setIsPricingYearly(!isPricingYearly)}
+          >
+            <div className="pricing-toggle-knob" />
+          </button>
+          <span className={`pricing-toggle-label ${isPricingYearly ? 'active' : ''}`}>YEARLY</span>
+          <span className="pricing-yearly-discount-badge">SAVE 20%</span>
+        </div>
+
+        {/* Pricing Cards Grid */}
+        <div className="pricing-v2-grid">
+          {/* Card 1: FREE */}
+          <div className="pricing-plan-card">
+            <div className="plan-card-meta">
+              <h2 className="plan-card-tier-title">FREE</h2>
+              <p className="plan-card-tier-desc">Explore the archive</p>
+            </div>
+            
+            <div className="plan-card-pricing-block">
+              <span className="plan-price-currency">₹</span>
+              <span className="plan-price-amount">0</span>
+              <span className="plan-price-period">/ month</span>
+            </div>
+
+            <div className="plan-card-features-list">
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Browse limited collection</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Watch trailers</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Standard resolution</span>
+              </div>
+              <div className="plan-feature-row disabled">
+                <span className="feature-check-icon disabled">✕</span>
+                <span className="feature-text">Full film access</span>
+              </div>
+              <div className="plan-feature-row disabled">
+                <span className="feature-check-icon disabled">✕</span>
+                <span className="feature-text">Early access to new releases</span>
+              </div>
+              <div className="plan-feature-row disabled">
+                <span className="feature-check-icon disabled">✕</span>
+                <span className="feature-text">Exclusive content</span>
+              </div>
+              <div className="plan-feature-row disabled">
+                <span className="feature-check-icon disabled">✕</span>
+                <span className="feature-text">Priority support</span>
+              </div>
+            </div>
+
+            <button 
+              className={`pricing-action-btn ${activePlan === 'Free' ? 'current-active' : ''}`}
+              onClick={() => handleSelectPlan('Free')}
+            >
+              {activePlan === 'Free' ? 'ACTIVE PLAN' : 'GET STARTED'}
+            </button>
+          </div>
+
+          {/* Card 2: BASIC */}
+          <div className="pricing-plan-card highlighted">
+            <div className="plan-popular-ribbon">MOST POPULAR</div>
+            <div className="plan-card-meta">
+              <h2 className="plan-card-tier-title">BASIC</h2>
+              <p className="plan-card-tier-desc">For film enthusiasts</p>
+            </div>
+            
+            <div className="plan-card-pricing-block">
+              <span className="plan-price-currency">₹</span>
+              <span className="plan-price-amount">{isPricingYearly ? '199' : '249'}</span>
+              <span className="plan-price-period">/ month</span>
+              <span className="plan-price-strikethrough">₹{isPricingYearly ? '249' : '299'}</span>
+            </div>
+
+            <div className="plan-card-features-list">
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Unlimited archive access</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Watch in HD</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">New releases every month</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Early access (7 days)</span>
+              </div>
+              <div className="plan-feature-row disabled">
+                <span className="feature-check-icon disabled">✕</span>
+                <span className="feature-text">Exclusive content</span>
+              </div>
+              <div className="plan-feature-row disabled">
+                <span className="feature-check-icon disabled">✕</span>
+                <span className="feature-text">Priority support</span>
+              </div>
+            </div>
+
+            <button 
+              className={`pricing-action-btn solid-red ${activePlan === 'Basic' ? 'current-active' : ''}`}
+              onClick={() => handleSelectPlan('Basic')}
+            >
+              {activePlan === 'Basic' ? 'ACTIVE PLAN' : 'CHOOSE PLAN'}
+            </button>
+          </div>
+
+          {/* Card 3: PREMIUM */}
+          <div className="pricing-plan-card">
+            <div className="plan-card-meta">
+              <h2 className="plan-card-tier-title">PREMIUM</h2>
+              <p className="plan-card-tier-desc">For serious collectors</p>
+            </div>
+            
+            <div className="plan-card-pricing-block">
+              <span className="plan-price-currency">₹</span>
+              <span className="plan-price-amount">{isPricingYearly ? '399' : '499'}</span>
+              <span className="plan-price-period">/ month</span>
+              <span className="plan-price-strikethrough">₹{isPricingYearly ? '499' : '599'}</span>
+            </div>
+
+            <div className="plan-card-features-list">
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Everything in Basic</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Watch in 4K</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Exclusive content & interviews</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Early access (14 days)</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Behind-the-scenes footage</span>
+              </div>
+              <div className="plan-feature-row disabled">
+                <span className="feature-check-icon disabled">✕</span>
+                <span className="feature-text">Priority support</span>
+              </div>
+            </div>
+
+            <button 
+              className={`pricing-action-btn ${activePlan === 'Premium' ? 'current-active' : ''}`}
+              onClick={() => handleSelectPlan('Premium')}
+            >
+              {activePlan === 'Premium' ? 'ACTIVE PLAN' : 'CHOOSE PLAN'}
+            </button>
+          </div>
+
+          {/* Card 4: PRO */}
+          <div className="pricing-plan-card">
+            <div className="plan-card-meta">
+              <h2 className="plan-card-tier-title">PRO</h2>
+              <p className="plan-card-tier-desc">For filmmakers & pros</p>
+            </div>
+            
+            <div className="plan-card-pricing-block">
+              <span className="plan-price-currency">₹</span>
+              <span className="plan-price-amount">{isPricingYearly ? '799' : '999'}</span>
+              <span className="plan-price-period">/ month</span>
+              <span className="plan-price-strikethrough">₹{isPricingYearly ? '999' : '1,199'}</span>
+            </div>
+
+            <div className="plan-card-features-list">
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Everything in Premium</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Offline downloads</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Private screenings</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Early access (30 days)</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Priority support</span>
+              </div>
+              <div className="plan-feature-row checked">
+                <span className="feature-check-icon checked">✓</span>
+                <span className="feature-text">Invites to exclusive events</span>
+              </div>
+            </div>
+
+            <button 
+              className={`pricing-action-btn ${activePlan === 'Pro' ? 'current-active' : ''}`}
+              onClick={() => handleSelectPlan('Pro')}
+            >
+              {activePlan === 'Pro' ? 'ACTIVE PLAN' : 'CHOOSE PLAN'}
+            </button>
+          </div>
+        </div>
+
+        {/* Pricing Footer Info Badge Panel */}
+        <div className="pricing-v2-footer-features">
+          <div className="pricing-footer-feature-item">
+            <div className="feature-icon-box">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="feature-text-block">
+              <span className="feature-title">FLEXIBLE & RISK FREE</span>
+              <span className="feature-desc">Cancel or change your plan anytime.</span>
+            </div>
+          </div>
+
+          <div className="pricing-footer-feature-item">
+            <div className="feature-icon-box">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9 11l2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="feature-text-block">
+              <span className="feature-title">SECURE PAYMENT</span>
+              <span className="feature-desc">Your payment information is always safe with us.</span>
+            </div>
+          </div>
+
+          <div className="pricing-footer-feature-item">
+            <div className="feature-icon-box">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="feature-text-block">
+              <span className="feature-title">NEED HELP?</span>
+              <span className="feature-desc">Contact our support team anytime.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSettings = () => {
+    return (
+      <div className="settings-v2-container">
+        <div className="profile-v2-header">
+          <h1 className="profile-v2-title font-heading-bebas">Console Settings</h1>
+          <p className="profile-v2-subtitle">Configure your film archive console environment, notifications, and vault security protocols.</p>
+        </div>
+
+        <div className="settings-card-v2">
+          {/* Section 1: Appearance */}
+          <div className="settings-section-v2">
+            <h3 className="settings-section-title font-heading-bebas">Console Interface</h3>
+            
+            <div className="settings-row-v2">
+              <div className="settings-row-info">
+                <span className="settings-row-title">Accent Styling Theme</span>
+                <span className="settings-row-desc">Select the primary glowing terminal color for your vault screen.</span>
+              </div>
+              
+              <div className="theme-picker-grid-v2">
+                {[
+                  { id: 'red', name: 'Crimson Base', color: '#ff3b30' },
+                  { id: 'amber', name: 'Amber Glow', color: '#ff9500' },
+                  { id: 'green', name: 'Terminal Green', color: '#30d158' },
+                  { id: 'blue', name: 'Celluloid Blue', color: '#0a84ff' },
+                ].map(t => (
+                  <button
+                    key={t.id}
+                    className={`theme-pill-v2 ${consoleTheme === t.id ? 'active' : ''}`}
+                    onClick={() => {
+                      setConsoleTheme(t.id);
+                      localStorage.setItem('r35_console_theme', t.id);
+                    }}
+                  >
+                    <span className="theme-pill-dot" style={{ backgroundColor: t.color }} />
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="settings-row-v2">
+              <div className="settings-row-info">
+                <span className="settings-row-title">Console Boot Sequence</span>
+                <span className="settings-row-desc">Bypass the immersive R-35 preloader sequence on session logins.</span>
+              </div>
+              <label className="settings-switch-v2">
+                <input 
+                  type="checkbox" 
+                  checked={skipPreloader} 
+                  onChange={(e) => {
+                    setSkipPreloader(e.target.checked);
+                    localStorage.setItem('r35_skip_preloader', e.target.checked);
+                  }} 
+                />
+                <span className="settings-slider-v2" />
+              </label>
+            </div>
+          </div>
+
+          {/* Section 2: Vault Security */}
+          <div className="settings-section-v2">
+            <h3 className="settings-section-title font-heading-bebas">Vault Security</h3>
+            
+            <div className="settings-row-v2">
+              <div className="settings-row-info">
+                <span className="settings-row-title">Ambient Security Pulse</span>
+                <span className="settings-row-desc">Engage the emergency glowing amber security pulse on the main viewport.</span>
+              </div>
+              <label className="settings-switch-v2">
+                <input 
+                  type="checkbox" 
+                  checked={isVaultAlertMode} 
+                  onChange={(e) => setIsVaultAlertMode(e.target.checked)} 
+                />
+                <span className="settings-slider-v2" />
+              </label>
+            </div>
+
+            <div className="settings-row-v2">
+              <div className="settings-row-info">
+                <span className="settings-row-title">Sound Alerts</span>
+                <span className="settings-row-desc">Play console beep and telemetry alerts on active state changes.</span>
+              </div>
+              <label className="settings-switch-v2">
+                <input 
+                  type="checkbox" 
+                  checked={alertSound} 
+                  onChange={(e) => setAlertSound(e.target.checked)} 
+                />
+                <span className="settings-slider-v2" />
+              </label>
+            </div>
+          </div>
+
+          {/* Section 3: Ledger Notifications */}
+          <div className="settings-section-v2">
+            <h3 className="settings-section-title font-heading-bebas">Notifications Settings</h3>
+            
+            <div className="settings-row-v2">
+              <div className="settings-row-info">
+                <span className="settings-row-title">Canister Shipment Alerts</span>
+                <span className="settings-row-desc">Receive immediate email alerts when acquired reels leave the vault storage hubs.</span>
+              </div>
+              <label className="settings-switch-v2">
+                <input 
+                  type="checkbox" 
+                  checked={orderNotifications} 
+                  onChange={(e) => setOrderNotifications(e.target.checked)} 
+                />
+                <span className="settings-slider-v2" />
+              </label>
+            </div>
+
+            <div className="settings-row-v2">
+              <div className="settings-row-info">
+                <span className="settings-row-title">Nitrate Base Catalog Logs</span>
+                <span className="settings-row-desc">Receive monthly ledgers regarding newly unsealed vault canister collections.</span>
+              </div>
+              <label className="settings-switch-v2">
+                <input 
+                  type="checkbox" 
+                  checked={catalogAlerts} 
+                  onChange={(e) => setCatalogAlerts(e.target.checked)} 
+                />
+                <span className="settings-slider-v2" />
+              </label>
+            </div>
+          </div>
+
+          {/* Section 4: System Reset */}
+          <div className="settings-section-v2">
+            <h3 className="settings-section-title font-heading-bebas">Console Database</h3>
+            
+            <div className="settings-row-v2">
+              <div className="settings-row-info">
+                <span className="settings-row-title">Clear Session Ledger Cache</span>
+                <span className="settings-row-desc">Wipe all local console states (clearing wishlists, cart reels, and themes).</span>
+              </div>
+              <button className="settings-reset-btn" onClick={() => {
+                if (window.confirm("ARE YOU SURE? This will log you out, empty your cart, empty your wishlist, and restore all default system properties.")) {
+                  handleDeleteAccount();
+                }
+              }}>
+                Reset Console
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1215,6 +2260,10 @@ export default function App() {
                 return renderAuth();
               } else if (activeNav === 'PROFILE') {
                 return renderProfile();
+              } else if (activeNav === 'PRICING') {
+                return renderPricing();
+              } else if (activeNav === 'SETTINGS') {
+                return renderSettings();
               } else {
                 return (
                   <div className="m-home-pane">
@@ -1358,15 +2407,24 @@ export default function App() {
                   ['FILMMAKERS', 'CATALOG [08]', '\u2630'],
                   ['ABOUT', 'INFO [NUM]', '\u25B2'],
                   ['CONTACT', 'INBOX [SEC]', '\u2709'],
+                  ['PRICING', 'PRICING [₹]', '₹'],
                   ...(user 
-                    ? [['PROFILE', 'VAULT-ID [01]', '👤']] 
+                    ? [
+                        ['PROFILE', 'PROFILE [👤]', '👤'],
+                        ['SETTINGS', 'SETTINGS [⚙️]', '⚙️'],
+                        ['LOGOUT', 'LOGOUT [🔐]', '🔐']
+                      ] 
                     : [['AUTH', 'SECURE-IN', '🔑']])
                 ].map(([navId, label, symbol]) => (
                   <button
                     key={navId}
                     className={`floating-dock-item ${activeNav === navId ? 'active' : ''}`}
                     onClick={() => {
-                      handleNavClick(navId);
+                      if (navId === 'LOGOUT') {
+                        handleLogout();
+                      } else {
+                        handleNavClick(navId);
+                      }
                       setIsMobileNavExpanded(false);
                     }}
                   >
@@ -1393,7 +2451,9 @@ export default function App() {
                    activeNav === 'FILMMAKERS' ? '\u2630 CATALOG' :
                    activeNav === 'ABOUT' ? '\u25B2 INFO' :
                    activeNav === 'CONTACT' ? '\u2709 INBOX' :
-                   activeNav === 'PROFILE' ? '👤 VAULT-ID' :
+                   activeNav === 'PROFILE' ? '👤 PROFILE' :
+                   activeNav === 'PRICING' ? '₹ PRICING' :
+                   activeNav === 'SETTINGS' ? '⚙️ SETTINGS' :
                    '🔑 SECURE-IN'}
                 </span>
                 <span className="trigger-icon-chevron">&#9652;</span>
@@ -1424,16 +2484,23 @@ export default function App() {
                   'COLLECTION',
                   'FILMMAKERS',
                   'ABOUT',
+                  'PRICING',
                   'CONTACT',
-                  ...(user ? ['PROFILE'] : ['LOGIN / SIGNUP'])
+                  ...(user ? ['LOGOUT'] : ['LOGIN / SIGNUP'])
                 ].map((item) => (
                   <li key={item}>
                     <a
                       href={`#${item.toLowerCase()}`}
-                      className={`nav-item ${(activeNav === item || (item === 'LOGIN / SIGNUP' && activeNav === 'AUTH')) && !selectedMovie ? 'active' : ''}`}
+                      className={`nav-item ${((activeNav === item || (item === 'LOGIN / SIGNUP' && activeNav === 'AUTH')) && !selectedMovie) ? 'active' : ''}`}
                       onClick={(e) => {
                         e.preventDefault();
-                        handleNavClick(item);
+                        if (item === 'LOGOUT') {
+                          handleLogout();
+                        } else if (item === 'LOGIN / SIGNUP') {
+                          handleNavClick('AUTH');
+                        } else {
+                          handleNavClick(item);
+                        }
                       }}
                     >
                       {item}
@@ -1519,10 +2586,17 @@ export default function App() {
                       <div className="header-user-dropdown-menu">
                         <div className="dropdown-user-email">{user.email}</div>
                         <button className="dropdown-menu-item" onClick={() => { setIsProfileDropdownOpen(false); handleNavClick('PROFILE'); }}>
-                          👤 VIEW VAULT PASS
+                          👤 Profile
                         </button>
+                        <button className="dropdown-menu-item" onClick={() => { setIsProfileDropdownOpen(false); handleNavClick('PRICING'); }}>
+                          ₹ Pricing
+                        </button>
+                        <button className="dropdown-menu-item" onClick={() => { setIsProfileDropdownOpen(false); handleNavClick('SETTINGS'); }}>
+                          ⚙️ Settings
+                        </button>
+                        <div className="dropdown-divider" />
                         <button className="dropdown-menu-item logout" onClick={() => { setIsProfileDropdownOpen(false); handleLogout(); }}>
-                          🔐 DE-AUTHORIZE ACCESS
+                          🔐 Logout
                         </button>
                       </div>
                     )}
@@ -1867,6 +2941,10 @@ export default function App() {
                 return renderAuth();
               } else if (activeNav === 'PROFILE') {
                 return renderProfile();
+              } else if (activeNav === 'PRICING') {
+                return renderPricing();
+              } else if (activeNav === 'SETTINGS') {
+                return renderSettings();
               } else {
                 // Default activeNav === 'HOME' Page view
                 return (
@@ -2613,7 +3691,7 @@ export default function App() {
                             {
                               order_reference: ref,
                               full_name: billingInfo.fullName,
-                              email: billingInfo.email,
+                              email: user?.email || billingInfo.email,
                               phone: billingInfo.phone,
                               country: billingInfo.country,
                               address_line: billingInfo.address,
@@ -2628,6 +3706,17 @@ export default function App() {
                               ordered_items: cartItems
                             }
                           ]);
+
+                          if (!error && user) {
+                            // Dynamically refresh orders logs for instant profile mapping
+                            supabase.from('orders')
+                              .select('*')
+                              .eq('email', user.email)
+                              .order('created_at', { ascending: false })
+                              .then(({ data }) => {
+                                if (data) setUserOrders(data);
+                              });
+                          }
 
                           if (error) {
                             console.error("Order insertion failed to Supabase:", error);
@@ -2762,6 +3851,77 @@ export default function App() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {user && showOnboarding && (
+        <div className="profile-modal-overlay-v2" style={{ zIndex: 11000 }}>
+          <div className="profile-modal-box-v2" style={{ maxWidth: '540px' }}>
+            <h2 className="profile-modal-title" style={{ fontFamily: 'var(--font-sans)', fontWeight: 'bold' }}>Operator Onboarding</h2>
+            <p className="profile-modal-desc" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              Welcome to R-35 Vault. Please complete your archivist details to initialize catalog authorization.
+            </p>
+            <form onSubmit={handleOnboardingSubmit} className="profile-v2-edit-form" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div className="profile-v2-edit-group">
+                <label className="profile-v2-edit-label">FULL NAME</label>
+                <input 
+                  type="text" 
+                  className="profile-v2-edit-input" 
+                  placeholder="e.g. Yash Patel" 
+                  value={tempOnboardName} 
+                  onChange={e => setTempOnboardName(e.target.value)} 
+                  required 
+                />
+              </div>
+              <div className="profile-v2-edit-group">
+                <label className="profile-v2-edit-label">PHONE NUMBER</label>
+                <input 
+                  type="text" 
+                  className="profile-v2-edit-input" 
+                  placeholder="e.g. +91 98765 43210" 
+                  value={tempOnboardPhone} 
+                  onChange={e => setTempOnboardPhone(e.target.value)} 
+                  required 
+                />
+              </div>
+              <div className="profile-v2-edit-group">
+                <label className="profile-v2-edit-label">SHIPPING ADDRESS</label>
+                <input 
+                  type="text" 
+                  className="profile-v2-edit-input" 
+                  placeholder="e.g. 123 Film Street, Andheri West" 
+                  value={tempOnboardStreet} 
+                  onChange={e => setTempOnboardStreet(e.target.value)} 
+                  required 
+                />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '0.85rem' }}>
+                <div className="profile-v2-edit-group" style={{ flex: 1 }}>
+                  <label className="profile-v2-edit-label">CITY</label>
+                  <input type="text" className="profile-v2-edit-input" placeholder="e.g. Mumbai" value={tempOnboardCity} onChange={e => setTempOnboardCity(e.target.value)} required />
+                </div>
+                <div className="profile-v2-edit-group" style={{ flex: 1 }}>
+                  <label className="profile-v2-edit-label">STATE</label>
+                  <input type="text" className="profile-v2-edit-input" placeholder="e.g. Maharashtra" value={tempOnboardState} onChange={e => setTempOnboardState(e.target.value)} required />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.85rem' }}>
+                <div className="profile-v2-edit-group" style={{ flex: 1 }}>
+                  <label className="profile-v2-edit-label">ZIP CODE</label>
+                  <input type="text" className="profile-v2-edit-input" placeholder="e.g. 400053" value={tempOnboardZip} onChange={e => setTempOnboardZip(e.target.value)} required />
+                </div>
+                <div className="profile-v2-edit-group" style={{ flex: 1 }}>
+                  <label className="profile-v2-edit-label">COUNTRY</label>
+                  <input type="text" className="profile-v2-edit-input" placeholder="e.g. India" value={tempOnboardCountry} onChange={e => setTempOnboardCountry(e.target.value)} required />
+                </div>
+              </div>
+
+              <button type="submit" className="edit-action-btn save" style={{ marginTop: '1rem', padding: '0.95rem' }}>
+                ACTIVATE CONSOLE ACCESS &rarr;
+              </button>
+            </form>
           </div>
         </div>
       )}
