@@ -336,6 +336,43 @@ export default function App() {
   const [userOrders, setUserOrders] = useState([]);
   const [isAuthWarningOpen, setIsAuthWarningOpen] = useState(false);
 
+  // ── Wishlist, Search, and Dropdown states ──
+  const [wishlistItems, setWishlistItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem('r35_wishlist');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [isWishlistActive, setIsWishlistActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('r35_wishlist', JSON.stringify(wishlistItems));
+    } catch (e) {
+      // Ignore
+    }
+  }, [wishlistItems]);
+
+  const handleToggleWishlist = (movie) => {
+    if (!user) {
+      setIsAuthWarningOpen(true);
+      return;
+    }
+    setWishlistItems(prev => {
+      const exists = prev.find(item => item.id === movie.id);
+      if (exists) {
+        return prev.filter(item => item.id !== movie.id);
+      } else {
+        return [...prev, movie];
+      }
+    });
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -435,6 +472,15 @@ export default function App() {
     }
   }, [isCartOpen]);
 
+  // Sync isWishlistActive for slide transitions
+  useEffect(() => {
+    if (isWishlistOpen) {
+      setTimeout(() => { setIsWishlistActive(true); }, 20);
+    } else {
+      setIsWishlistActive(false);
+    }
+  }, [isWishlistOpen]);
+
   // Sync isCheckoutActive for slide transitions
   useEffect(() => {
     if (isCheckoutOpen) {
@@ -526,6 +572,7 @@ export default function App() {
     setIsProductActive(false);
     setSelectedMovie(null);
     setIsCartOpen(false);
+    setIsWishlistOpen(false);
     setIsMobileMenuOpen(false);
     setActiveNav(item);
   };
@@ -986,9 +1033,16 @@ export default function App() {
             <div className="mobile-header-status">
               <span className="live-pulse" /> VAULT ONLINE
             </div>
-            <button className="mobile-cart-trigger" onClick={() => setIsCartOpen(!isCartOpen)}>
-              CART [ <span className="cart-num-highlight">{String(cartCount).padStart(2, '0')}</span> ]
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {user && (
+                <button className="mobile-cart-trigger mobile-wishlist-trigger" onClick={() => setIsWishlistOpen(!isWishlistOpen)}>
+                  WISHLIST [ <span className="cart-num-highlight">{String(wishlistItems.length).padStart(2, '0')}</span> ]
+                </button>
+              )}
+              <button className="mobile-cart-trigger" onClick={() => setIsCartOpen(!isCartOpen)}>
+                CART [ <span className="cart-num-highlight">{String(cartCount).padStart(2, '0')}</span> ]
+              </button>
+            </div>
           </header>
 
           {/* MOBILE MAIN WORKSPACE */}
@@ -1404,19 +1458,82 @@ export default function App() {
 
           <main className="main-content">
             {/* TOP HEADER NAVIGATION */}
-            <header className="header-nav">
+            <header className="header-nav revamped-header">
               <div className="mobile-header-brand" onClick={() => handleNavClick('HOME')}>R-35</div>
-              <button className="search-btn">SEARCH &mdash;</button>
-              <div 
-                className="cart-trigger-container"
-                onClick={() => setIsCartOpen(!isCartOpen)}
-                style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', cursor: 'pointer' }}
-              >
-                <div className="cart-trigger">
-                  CART [ <span className="cart-number" style={{ color: isCartOpen ? 'var(--accent-red)' : 'var(--text-white)' }}>{String(cartCount).padStart(2, '0')}</span> ]
-                </div>
-                {isCartOpen && <span className="cart-close-x" style={{ fontSize: '0.9rem', color: '#888', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = '#fff'} onMouseLeave={(e) => e.target.style.color = '#888'}>&#10005;</span>}
+              
+              {/* REVAMPED REAL-TIME SEARCH BAR */}
+              <div className="revamped-search-bar-container">
+                <span className="search-magnifying-glass">🔍</span>
+                <input 
+                  type="text" 
+                  className="revamped-search-input" 
+                  placeholder="Search for films, directors..." 
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (activeNav !== 'COLLECTION') {
+                      setActiveNav('COLLECTION');
+                    }
+                  }}
+                />
+                {searchQuery && (
+                  <button className="search-clear-btn" onClick={() => setSearchQuery('')}>✕</button>
+                )}
               </div>
+
+              <div className="header-right-actions">
+                {/* WISHLIST TRIGGER BADGE */}
+                <div 
+                  className="header-trigger-block wishlist-trigger" 
+                  onClick={() => setIsWishlistOpen(!isWishlistOpen)}
+                  title="Your Wishlist"
+                >
+                  <span className="trigger-icon">{wishlistItems.length > 0 ? '❤️' : '♡'}</span>
+                  {wishlistItems.length > 0 && <span className="trigger-badge">{wishlistItems.length}</span>}
+                </div>
+
+                {/* CART TRIGGER BADGE */}
+                <div 
+                  className="header-trigger-block cart-trigger-badge" 
+                  onClick={() => setIsCartOpen(!isCartOpen)}
+                  title="Your Cart"
+                >
+                  <span className="trigger-icon">🛒</span>
+                  {cartCount > 0 && <span className="trigger-badge">{cartCount}</span>}
+                </div>
+
+                <span className="header-vertical-divider">|</span>
+
+                {/* USER PROFILE DRIVEN AVATAR OR LOGIN */}
+                {user ? (
+                  <div className="header-user-dropdown-container">
+                    <div className="header-user-avatar-trigger" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
+                      <div className="header-avatar-circle">
+                        {(user?.email?.[0] || 'A').toUpperCase()}
+                        <div className="avatar-active-dot" />
+                      </div>
+                      <span className="chevron-icon">▼</span>
+                    </div>
+                    
+                    {isProfileDropdownOpen && (
+                      <div className="header-user-dropdown-menu">
+                        <div className="dropdown-user-email">{user.email}</div>
+                        <button className="dropdown-menu-item" onClick={() => { setIsProfileDropdownOpen(false); handleNavClick('PROFILE'); }}>
+                          👤 VIEW VAULT PASS
+                        </button>
+                        <button className="dropdown-menu-item logout" onClick={() => { setIsProfileDropdownOpen(false); handleLogout(); }}>
+                          🔐 DE-AUTHORIZE ACCESS
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button className="header-login-trigger-btn" onClick={() => handleNavClick('LOGIN / SIGNUP')}>
+                    [ SECURE LOGIN ]
+                  </button>
+                )}
+              </div>
+
               <button 
                 className="mobile-menu-toggle"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -1569,20 +1686,35 @@ export default function App() {
                     </div>
 
                     <div className="collections-cards-grid">
-                      {collectionMovies.map((movie, index) => {
-                        const displayId = (index + 1).toString().padStart(3, '0');
-                        return (
-                          <div 
-                            key={movie.id} 
-                            className="collections-vintage-card" 
-                            onClick={() => openProductPage(movie)}
-                          >
-                            {/* Top half text details */}
-                            <div className="collections-card-top">
-                              <div className="card-brand-header">
-                                <span className="card-brand-tag">R-35</span>
-                                <span className="card-index-tag">{displayId}</span>
-                              </div>
+                      {collectionMovies
+                        .filter(movie => {
+                          const query = searchQuery.toLowerCase();
+                          return movie.title.toLowerCase().includes(query) || movie.director.toLowerCase().includes(query) || movie.year.toLowerCase().includes(query);
+                        })
+                        .map((movie, index) => {
+                          const displayId = (index + 1).toString().padStart(3, '0');
+                          return (
+                            <div 
+                              key={movie.id} 
+                              className="collections-vintage-card" 
+                              onClick={() => openProductPage(movie)}
+                            >
+                              {/* Top half text details */}
+                              <div className="collections-card-top">
+                                <div className="card-brand-header">
+                                  <span className="card-brand-tag">R-35</span>
+                                  <span 
+                                    className={`card-wishlist-toggle ${wishlistItems.find(item => item.id === movie.id) ? 'active' : ''}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleWishlist(movie);
+                                    }}
+                                    title={wishlistItems.find(item => item.id === movie.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                                  >
+                                    {wishlistItems.find(item => item.id === movie.id) ? '❤️' : '♡'}
+                                  </span>
+                                  <span className="card-index-tag">{displayId}</span>
+                                </div>
                               
                               <h2 className="collections-card-title">{movie.title}</h2>
                               
@@ -1914,18 +2046,114 @@ export default function App() {
               {/* Purchase Trigger Block */}
               <div className="product-purchase-section">
                 <span className="product-price">{selectedMovie.price}</span>
-                <button 
-                  className="product-buy-btn" 
-                  onClick={() => handleAddToCart(selectedMovie)}
-                  disabled={isAddedToCart}
-                >
-                  {isAddedToCart ? (
-                    <>REEL SECURED <span className="vault-check-icon">&#10003;</span></>
-                  ) : (
-                    <>ACQUIRE REEL <span className="arrow-wide">&rarr;</span></>
-                  )}
-                </button>
+                <div className="product-action-buttons">
+                  <button 
+                    className="product-buy-btn" 
+                    onClick={() => handleAddToCart(selectedMovie)}
+                    disabled={isAddedToCart}
+                  >
+                    {isAddedToCart ? (
+                      <>REEL SECURED <span className="vault-check-icon">&#10003;</span></>
+                    ) : (
+                      <>ACQUIRE REEL <span className="arrow-wide">&rarr;</span></>
+                    )}
+                  </button>
+                  <button 
+                    className={`product-wishlist-btn ${wishlistItems.find(item => item.id === selectedMovie.id) ? 'active' : ''}`}
+                    onClick={() => handleToggleWishlist(selectedMovie)}
+                    title={wishlistItems.find(item => item.id === selectedMovie.id) ? "Remove from Wishlist" : "Add to Wishlist"}
+                  >
+                    {wishlistItems.find(item => item.id === selectedMovie.id) ? '❤️' : '♡'}
+                  </button>
+                </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==========================================================
+           YOUR WISHLIST OVERLAY VIEW
+           ========================================================== */}
+        {isWishlistOpen && (
+          <div className={`cart-page-container wishlist-drawer-overlay ${isWishlistActive ? 'active' : 'exiting'}`}>
+            <div className="cart-left-col">
+              <h1 className="cart-main-title font-heading-bebas">YOUR WISHLIST</h1>
+              <div className="accent-bar-small" />
+              <p className="cart-subtitle-desc">
+                Your archival collection favorites.<br />
+                Acquire reels directly or manage your catalog bookmarks here.
+              </p>
+
+              <div className="cart-items-table">
+                <div className="cart-table-header">
+                  <span className="th-item">ITEM</span>
+                  <span className="th-format">FORMAT</span>
+                  <span className="th-price">PRICE</span>
+                  <span className="th-remove">ACTION</span>
+                </div>
+
+                <div className="cart-table-body">
+                  {wishlistItems.length === 0 ? (
+                    <div className="empty-cart-state">
+                      <div className="empty-cart-reel-icon">
+                        <span style={{ fontSize: '3rem' }}>❤️</span>
+                      </div>
+                      <span className="empty-cart-label">WISHLIST EMPTY</span>
+                      <p className="empty-cart-hint">Your favorites showcase is empty. Bookmarks help you track reels.</p>
+                      <button
+                        className="empty-cart-browse-btn"
+                        onClick={() => { setIsWishlistOpen(false); }}
+                      >
+                        BROWSE CATALOG <span className="arrow-wide">&rarr;</span>
+                      </button>
+                    </div>
+                  ) : (
+                    wishlistItems.map((item, idx) => (
+                      <div key={item.id} className="cart-item-row">
+                        <div className="col-item-details">
+                          <span className="item-index">{String(idx + 1).padStart(2, '0')}</span>
+                          <div className="item-title-block">
+                            <span className="item-title font-heading-bebas">{item.title}</span>
+                            <span className="item-meta">DIR. {item.director}</span>
+                            <span className="item-meta">{item.year}</span>
+                          </div>
+                        </div>
+
+                        <div className="col-item-format">
+                          <span className="format-gauge">{item.gauge || '35MM REEL'}</span>
+                          <span className="format-cut">{item.spec2 || 'ORIGINAL RELEASE'}</span>
+                        </div>
+
+                        <div className="col-item-price">
+                          <span className="item-price-val">{item.price}</span>
+                        </div>
+
+                        <div className="col-item-quantity" style={{ display: 'flex', gap: '1rem', width: 'auto', justifySelf: 'flex-end', alignItems: 'center' }}>
+                          <button 
+                            className="wishlist-acquire-btn"
+                            onClick={() => {
+                              handleAddToCart(item);
+                            }}
+                          >
+                            [ ACQUIRE ]
+                          </button>
+                          <button 
+                            className="remove-item-btn"
+                            style={{ margin: 0 }}
+                            onClick={() => handleToggleWishlist(item)}
+                          >
+                            &#10005;
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <button className="continue-shopping-btn" onClick={() => setIsWishlistOpen(false)}>
+                &larr; CLOSE WISHLIST
+              </button>
             </div>
           </div>
         )}
