@@ -1071,11 +1071,47 @@ export default function App() {
   };
 
   const handleDeleteAccount = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setUserOrders([]);
-    
-    // Clear all custom profile & session data
+    if (user) {
+      // 1. Call the secure RPC function to delete the auth user record from Supabase
+      try {
+        const { error: rpcError } = await supabase.rpc('delete_current_user');
+        if (rpcError) {
+          console.error("RPC account deletion failed:", rpcError);
+          alert("Vault account purge aborted: The 'delete_current_user' SQL function is missing in your Supabase project.\n\nPlease go to your Supabase Dashboard > SQL Editor, execute the SQL script provided, and try again!");
+          return;
+        }
+      } catch (e) {
+        console.warn("RPC account deletion exception:", e);
+        alert("An error occurred during account deletion: " + (e.message || e));
+        return;
+      }
+
+      // 2. Delete user orders from the database
+      try {
+        const { error } = await supabase.from('orders').delete().eq('email', user.email);
+        if (error) console.error("Database orders purge failed:", error);
+      } catch (e) {
+        console.warn("Database purge exception:", e);
+      }
+      
+      // 2. Clear all user-specific localStorage entries
+      const userId = user.id;
+      localStorage.removeItem('r35_user_fullname_' + userId);
+      localStorage.removeItem('r35_user_phone_' + userId);
+      localStorage.removeItem('r35_user_dob_' + userId);
+      localStorage.removeItem('r35_member_since_' + userId);
+      localStorage.removeItem('r35_active_plan_' + userId);
+      localStorage.removeItem('r35_ship_name_' + userId);
+      localStorage.removeItem('r35_ship_street_' + userId);
+      localStorage.removeItem('r35_ship_city_' + userId);
+      localStorage.removeItem('r35_ship_state_' + userId);
+      localStorage.removeItem('r35_ship_zip_' + userId);
+      localStorage.removeItem('r35_ship_country_' + userId);
+      localStorage.removeItem('r35_ship_phone_' + userId);
+      localStorage.removeItem('r35_onboarded_' + userId);
+    }
+
+    // 3. Wiping generic spectator local storage keys
     localStorage.removeItem('r35_active_plan');
     localStorage.removeItem('r35_user_fullname');
     localStorage.removeItem('r35_user_phone');
@@ -1091,7 +1127,12 @@ export default function App() {
     localStorage.removeItem('r35_cart');
     localStorage.removeItem('r35_wishlist');
     
-    // Reset state to initial SPECTATOR values
+    // 4. Sign out auth session
+    await supabase.auth.signOut();
+    setUser(null);
+    setUserOrders([]);
+
+    // 5. Reset state to initial SPECTATOR values
     setActivePlan('None');
     setUserFullName('Yash Patel');
     setUserPhone('+91 98765 43210');

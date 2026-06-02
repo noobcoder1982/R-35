@@ -252,6 +252,8 @@ button {
   padding: 0 3rem;
   gap: 3rem;
   flex-shrink: 0;
+  position: relative !important;
+  z-index: 999 !important;
 }
 
 .search-btn {
@@ -9294,4 +9296,128 @@ button {
   .pricing-v2-title {
     font-size: 2.4rem !important;
   }
+}
+
+/* ==========================================================
+   HIGH-FIDELITY USER AVATAR & DROPDOWN FLOATING SYSTEM
+   ========================================================== */
+.header-user-dropdown-container {
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+.header-user-avatar-trigger {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  cursor: pointer !important;
+}
+
+.header-avatar-circle {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 50% !important;
+  background-color: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  position: relative !important;
+}
+
+.avatar-active-dot {
+  width: 8px !important;
+  height: 8px !important;
+  background-color: #30d158 !important;
+  border-radius: 50% !important;
+  border: 1.5px solid #000000 !important;
+  position: absolute !important;
+  bottom: 0px !important;
+  right: 0px !important;
+}
+
+.chevron-icon {
+  font-size: 0.65rem !important;
+  color: var(--text-muted) !important;
+  transition: transform 0.2s ease !important;
+}
+
+.header-user-dropdown-menu {
+  position: absolute !important;
+  top: calc(100% + 12px) !important;
+  right: 0 !important;
+  width: 220px !important;
+  background-color: #121214 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  padding: 0.5rem !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  z-index: 10000 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.2rem !important;
+  animation: dropdownFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-user-email {
+  font-size: 0.72rem !important;
+  font-family: var(--font-mono) !important;
+  color: #8a8a93 !important;
+  padding: 0.5rem 0.75rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  margin-bottom: 0.3rem !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+}
+
+.dropdown-menu-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  width: 100% !important;
+  padding: 0.55rem 0.75rem !important;
+  font-size: 0.8rem !important;
+  color: #c7c7cc !important;
+  border-radius: 6px !important;
+  transition: all 0.18s ease !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.dropdown-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #ffffff !important;
+}
+
+.dropdown-menu-item.logout {
+  color: var(--accent-red) !important;
+}
+
+.dropdown-menu-item.logout:hover {
+  background-color: rgba(255, 59, 48, 0.1) !important;
+  color: var(--accent-red) !important;
+}
+
+.dropdown-divider {
+  height: 1px !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  margin: 0.25rem 0 !important;
 }
